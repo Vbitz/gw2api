@@ -8,6 +8,10 @@ cmd/discord/discord-bot.exe
 cmd/web/web-server
 cmd/web/web-server.exe
 
+# Generated binaries (exclude from repo)
+cli_*
+server_*
+
 # Build artifacts
 dist/
 build/

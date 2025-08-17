@@ -43,15 +43,15 @@ bulk operations, pagination, and multiple output formats.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize client with global flags
 		var opts []gw2api.ClientOption
-		
+
 		if timeout > 0 {
 			opts = append(opts, gw2api.WithTimeout(time.Duration(timeout)*time.Second))
 		}
-		
+
 		if apiKey != "" {
 			opts = append(opts, gw2api.WithAPIKey(apiKey))
 		}
-		
+
 		if language != "" {
 			switch language {
 			case "en":
@@ -69,7 +69,7 @@ bulk operations, pagination, and multiple output formats.`,
 				os.Exit(1)
 			}
 		}
-		
+
 		opts = append(opts, gw2api.WithUserAgent("gw2api-cli/1.0"))
 		client = gw2api.NewClient(opts...)
 	},
@@ -99,7 +99,7 @@ func init() {
 		commerceCmd,
 		versionCmd,
 	)
-	
+
 	// Add subcommands to their parents
 	achievementsCmd.AddCommand(achievementsListCmd, achievementsGetCmd)
 	currenciesCmd.AddCommand(currenciesListCmd, currenciesGetCmd, currenciesAllCmd)
@@ -130,7 +130,7 @@ var buildCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		outputData(build)
 	},
 }
@@ -154,7 +154,7 @@ var achievementsListCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		outputIDs(ids)
 	},
 }
@@ -166,7 +166,7 @@ var achievementsGetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 		ids := parseIDs(args)
-		
+
 		if len(ids) == 1 {
 			achievement, err := client.GetAchievement(ctx, ids[0])
 			if err != nil {
@@ -213,7 +213,7 @@ var itemsGetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 		ids := parseIDs(args)
-		
+
 		if len(ids) == 1 {
 			item, err := client.GetItem(ctx, ids[0])
 			if err != nil {
@@ -251,36 +251,36 @@ Examples:
   gw2api items search --name "berserker" --limit 10`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
-		
+
 		name, _ := cmd.Flags().GetString("name")
 		rarity, _ := cmd.Flags().GetString("rarity")
 		limit, _ := cmd.Flags().GetInt("limit")
-		
+
 		if name == "" && rarity == "" {
 			fmt.Fprintf(os.Stderr, "Error: At least one search criteria (--name or --rarity) must be provided\n")
 			os.Exit(1)
 		}
-		
+
 		options := gw2api.ItemSearchOptions{
 			Name:  name,
 			Limit: limit,
 		}
-		
+
 		if rarity != "" {
 			options.Rarities = []string{rarity}
 		}
-		
+
 		items, err := client.SearchItems(ctx, options)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		if len(items) == 0 {
 			fmt.Println("No items found matching the search criteria")
 			return
 		}
-		
+
 		outputData(items)
 	},
 }
@@ -387,7 +387,7 @@ func outputAchievementTable(achievements []*gw2api.Achievement) {
 		if len(name) > 40 {
 			name = name[:37] + "..."
 		}
-		
+
 		points := "0"
 		if len(achievement.Tiers) > 0 {
 			totalPoints := 0
@@ -396,7 +396,7 @@ func outputAchievementTable(achievements []*gw2api.Achievement) {
 			}
 			points = strconv.Itoa(totalPoints)
 		}
-		
+
 		table.Append(
 			strconv.Itoa(achievement.ID),
 			name,
