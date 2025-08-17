@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 )
 
 const (
@@ -387,7 +386,7 @@ func (c *Client) GetAchievements(ctx context.Context, ids []int, options ...Requ
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*Achievement, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -411,7 +410,7 @@ func (c *Client) GetCurrencies(ctx context.Context, ids []int, options ...Reques
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*Currency, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -435,7 +434,7 @@ func (c *Client) GetItems(ctx context.Context, ids []int, options ...RequestOpti
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*Item, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -459,7 +458,7 @@ func (c *Client) GetWorlds(ctx context.Context, ids []int, options ...RequestOpt
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*World, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -473,7 +472,7 @@ func (c *Client) GetWorldsPage(ctx context.Context, options ...RequestOption) ([
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	ptrs := make([]*World, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -497,7 +496,7 @@ func (c *Client) GetCommercePrices(ctx context.Context, itemIDs []int, options .
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*Price, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -521,7 +520,7 @@ func (c *Client) GetAllCurrencies(ctx context.Context, options ...RequestOption)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*Currency, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]
@@ -535,7 +534,7 @@ func (c *Client) GetAllWorlds(ctx context.Context, options ...RequestOption) ([]
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ptrs := make([]*World, len(results))
 	for i := range results {
 		ptrs[i] = &results[i]

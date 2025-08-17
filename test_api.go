@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-
 )
 
 func testAPI() {
@@ -17,7 +16,7 @@ func testAPI() {
 
 	ctx := context.Background()
 
-	fmt.Println("=== Testing Typed GW2 API Client ===\n")
+	fmt.Println("=== Testing Typed GW2 API Client ===")
 
 	// Test 1: Get build (single value)
 	fmt.Println("1. Current Build:")

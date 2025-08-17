@@ -2,18 +2,18 @@ package main
 
 // Achievement represents a Guild Wars 2 achievement
 type Achievement struct {
-	ID           int                `json:"id"`
-	Name         string             `json:"name"`
-	Description  string             `json:"description"`
-	Requirement  string             `json:"requirement"`
-	LockedText   string             `json:"locked_text"`
-	Type         string             `json:"type"`
-	Flags        []string           `json:"flags"`
-	Tiers        []AchievementTier  `json:"tiers"`
-	Prerequisites []int             `json:"prerequisites,omitempty"`
-	Rewards      []AchievementReward `json:"rewards,omitempty"`
-	Bits         []AchievementBit   `json:"bits,omitempty"`
-	PointCap     int                `json:"point_cap,omitempty"`
+	ID            int                 `json:"id"`
+	Name          string              `json:"name"`
+	Description   string              `json:"description"`
+	Requirement   string              `json:"requirement"`
+	LockedText    string              `json:"locked_text"`
+	Type          string              `json:"type"`
+	Flags         []string            `json:"flags"`
+	Tiers         []AchievementTier   `json:"tiers"`
+	Prerequisites []int               `json:"prerequisites,omitempty"`
+	Rewards       []AchievementReward `json:"rewards,omitempty"`
+	Bits          []AchievementBit    `json:"bits,omitempty"`
+	PointCap      int                 `json:"point_cap,omitempty"`
 }
 
 // AchievementTier represents a tier within an achievement
