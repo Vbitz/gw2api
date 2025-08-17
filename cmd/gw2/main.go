@@ -36,10 +36,6 @@ func main() {
 var rootCmd = &cobra.Command{
 	Use:   "gw2api",
 	Short: "Guild Wars 2 API command-line client",
-	Long: `A comprehensive command-line client for the Guild Wars 2 API.
-	
-Provides access to all public API endpoints with full type safety,
-bulk operations, pagination, and multiple output formats.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize client with global flags
 		var opts []gw2api.ClientOption
@@ -77,7 +73,7 @@ bulk operations, pagination, and multiple output formats.`,
 
 func init() {
 	// Global flags
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format (json, table, yaml)")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "table", "Output format (json, table, yaml)")
 	rootCmd.PersistentFlags().StringVarP(&language, "lang", "l", "en", "Language (en, es, de, fr, zh)")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "t", 30, "Request timeout in seconds")
 	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API key for authenticated endpoints")
@@ -329,7 +325,7 @@ func outputIDs(ids []int) {
 	}
 }
 
-func outputData(data interface{}) {
+func outputData(data any) {
 	switch outputFormat {
 	case "json":
 		jsonData, _ := json.MarshalIndent(data, "", "  ")
@@ -342,7 +338,7 @@ func outputData(data interface{}) {
 	}
 }
 
-func outputTable(data interface{}) {
+func outputTable(data any) {
 	switch v := data.(type) {
 	case *gw2api.Item:
 		outputItemTable([]*gw2api.Item{v})

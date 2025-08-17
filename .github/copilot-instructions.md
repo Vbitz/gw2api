@@ -8,12 +8,12 @@ Always reference these instructions first and fallback to search or bash command
 - Go 1.24.2+ is required (confirmed working with Go 1.24.6)
 - Install dependencies and build the project:
   - `go mod tidy` -- takes <1 second
-  - `go build -o cli ./cmd/cli/` -- takes 1-2 seconds. Builds the CLI tool
+  - `go build -o gw2 ./cmd/gw2/` -- takes 1-2 seconds. Builds the CLI tool
   - `go build -o server ./cmd/server/` -- takes 1-2 seconds. Builds the web server + Discord bot
   - `go build ./...` -- takes 1-2 seconds. Builds all components at once
 
 ### Development Mode (Alternative to Building)
-- CLI development: `go run ./cmd/cli/ [command]` -- takes 1-2 seconds to start
+- CLI development: `go run ./cmd/gw2/ [command]` -- takes 1-2 seconds to start
 - Server development: `go run ./cmd/server/ [flags]` -- takes 1-2 seconds to start
 
 ### Testing
@@ -24,13 +24,13 @@ Always reference these instructions first and fallback to search or bash command
 ### Running the Applications
 
 #### CLI Tool
-- ALWAYS build first: `go build -o cli ./cmd/cli/`
-- Basic usage: `./cli --help`
-- Version check: `./cli version`
+- ALWAYS build first: `go build -o gw2 ./cmd/gw2/`
+- Basic usage: `./gw2 --help`
+- Version check: `./gw2 version`
 - Available commands: `build`, `achievements`, `currencies`, `items`, `worlds`, `skills`, `commerce`
 - **NETWORK DEPENDENCY**: All API commands require internet access to api.guildwars2.com
 - **EXPECTED OFFLINE ERROR**: `dial tcp: lookup api.guildwars2.com: server misbehaving` when no internet
-- Test offline functionality: `./cli --help`, `./cli version`, `./cli achievements --help`
+- Test offline functionality: `./gw2 --help`, `./gw2 version`, `./gw2 achievements --help`
 
 #### Web Server + Discord Bot
 - ALWAYS build first: `go build -o server ./cmd/server/`
@@ -44,9 +44,9 @@ Always reference these instructions first and fallback to search or bash command
 ### Key Development Workflows
 
 #### Making Changes to CLI
-1. Edit files in `cmd/cli/` or `internal/`
-2. `go build -o cli ./cmd/cli/`
-3. Test with `./cli [command]`
+1. Edit files in `cmd/gw2/` or `internal/`
+2. `go build -o gw2 ./cmd/gw2/`
+3. Test with `./gw2 [command]`
 4. Run `gofmt -w .` before committing
 
 #### Making Changes to Server  
@@ -59,7 +59,7 @@ Always reference these instructions first and fallback to search or bash command
 #### Adding New API Endpoints
 - Edit `internal/gw2api/client.go` for new methods
 - Edit `internal/gw2api/types.go` for new data structures
-- Update CLI commands in `cmd/cli/main.go`
+- Update CLI commands in `cmd/gw2/main.go`
 - Update web handlers in `internal/web/server.go`
 - Update Discord handlers in `internal/discord/bot.go`
 
@@ -69,11 +69,11 @@ Always reference these instructions first and fallback to search or bash command
 1. `gofmt -w .` -- Format all code
 2. `go vet ./...` -- Check for issues  
 3. `go build ./...` -- Ensure everything builds
-4. Test CLI: `./cli --help` and `./cli version`
+4. Test CLI: `./gw2 --help` and `./gw2 version`
 5. Test server: Start with `./server -web-only` and visit http://localhost:8080
 
 ### Manual Testing Scenarios
-- **CLI Help System**: Test `./cli --help`, `./cli achievements --help`, etc.
+- **CLI Help System**: Test `./gw2 --help`, `./gw2 achievements --help`, etc.
 - **Web Interface**: Start server and test interactive interface at /web/
 - **Network Error Handling**: Test commands with `--timeout 1` to verify error messages
 - **Output Formats**: Test with `--output table` and `--output json`
@@ -82,7 +82,7 @@ Always reference these instructions first and fallback to search or bash command
 ## Project Structure
 
 ### Key Directories
-- `cmd/cli/` - Command-line interface main package
+- `cmd/gw2/` - Command-line interface main package
 - `cmd/server/` - Web server + Discord bot main package  
 - `internal/gw2api/` - Core API client library
 - `internal/web/` - Web server and HTTP handlers
@@ -97,8 +97,8 @@ Always reference these instructions first and fallback to search or bash command
 - `README.md` - Main project documentation
 
 ### Generated Binaries
-- `cli` - Pre-built CLI tool (functional)
-- Build outputs: `cli_new`, `server_new`, etc. (your builds)
+- `gw2` - Pre-built CLI tool (functional)
+- Build outputs: `gw2_new`, `server_new`, etc. (your builds)
 
 ## API Overview
 
@@ -114,16 +114,16 @@ Always reference these instructions first and fallback to search or bash command
 ### CLI Command Examples
 ```bash
 # Get current build
-./cli build
+./gw2 build
 
 # Get achievement with table output
-./cli achievements get 1 --output table
+./gw2 achievements get 1 --output table
 
 # Get multiple items in German
-./cli items get 100,200,300 --lang de
+./gw2 items get 100,200,300 --lang de
 
 # Search for items (placeholder implementation)
-./cli items search --name sword --limit 10
+./gw2 items search --name sword --limit 10
 ```
 
 ### Web API Endpoints

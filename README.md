@@ -5,12 +5,13 @@ A fully typed, comprehensive Go client library and server for the Guild Wars 2 A
 ## 🆕 New Features
 
 - **Discord Bot**: Modern slash commands for all major GW2 API endpoints
-- **Web Server**: REST API and interactive web interface  
+- **Web Server**: REST API and interactive web interface
 - **Organized Structure**: Clean separation into CLI, server, and library components
 
 ## Quick Start
 
 ### Server (Discord Bot + Web Interface)
+
 ```bash
 # Build the server
 go build -o server ./cmd/server/
@@ -26,20 +27,21 @@ go build -o server ./cmd/server/
 ```
 
 ### CLI Tool (Original)
+
 ```bash
 # Build the CLI
-go build -o cli ./cmd/cli/
+go build -o gw2 ./cmd/gw2/
 
 # Use the CLI
-./cli build
-./cli achievements get 1 --output table
+./gw2 build
+./gw2 achievements get 1 --output table
 ```
 
 ## Project Structure
 
 ```
 ├── cmd/
-│   ├── cli/          # Command-line interface (original)
+│   ├── gw2/          # Command-line interface (original)
 │   └── server/       # Server (Discord bot + web server)
 ├── internal/
 │   ├── gw2api/       # Core GW2 API client library
@@ -92,7 +94,7 @@ import (
     "context"
     "fmt"
     "time"
-    
+
     "j5.nz/gw2/internal/gw2api"
 )
 
@@ -102,23 +104,23 @@ func main() {
         gw2api.WithTimeout(10*time.Second),
         gw2api.WithLanguage(gw2api.LanguageEnglish),
     )
-    
+
     ctx := context.Background()
-    
+
     // Get current build
     build, err := client.GetBuild(ctx)
     if err != nil {
         panic(err)
     }
     fmt.Printf("Current build: %d\n", build.ID)
-    
+
     // Get achievement with full type safety
     achievement, err := client.GetAchievement(ctx, 1)
     if err != nil {
         panic(err)
     }
     fmt.Printf("Achievement: %s (%d tiers)\n", achievement.Name, len(achievement.Tiers))
-    
+
     // Get multiple items efficiently
     items, err := client.GetItems(ctx, []int{100, 200, 300})
     if err != nil {
@@ -134,24 +136,24 @@ func main() {
 
 - **[SERVER_README.md](SERVER_README.md)** - Complete server and Discord bot setup guide
 - **[CLI_README.md](CLI_README.md)** - Original CLI documentation and examples
-    
-    // Get achievement with full type safety
-    achievement, err := client.GetAchievement(ctx, 1)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Achievement: %s (%d tiers)\n", achievement.Name, len(achievement.Tiers))
-    
-    // Get multiple items efficiently
-    items, err := client.GetItems(ctx, []int{100, 200, 300})
-    if err != nil {
-        panic(err)
-    }
-    for _, item := range items {
-        fmt.Printf("Item: %s (Level %d %s)\n", item.Name, item.Level, item.Rarity)
-    }
-}
-```
+      // Get achievement with full type safety
+      achievement, err := client.GetAchievement(ctx, 1)
+      if err != nil {
+          panic(err)
+      }
+      fmt.Printf("Achievement: %s (%d tiers)\n", achievement.Name, len(achievement.Tiers))
+
+      // Get multiple items efficiently
+      items, err := client.GetItems(ctx, []int{100, 200, 300})
+      if err != nil {
+          panic(err)
+      }
+      for _, item := range items {
+          fmt.Printf("Item: %s (Level %d %s)\n", item.Name, item.Level, item.Rarity)
+      }
+  }
+
+````
 
 ## API Coverage
 
@@ -188,9 +190,10 @@ func main() {
 achievement, err := client.GetAchievement(ctx, 1)
 item, err := client.GetItem(ctx, 12345)
 world, err := client.GetWorld(ctx, 1001)
-```
+````
 
 ### Multiple Items (Bulk)
+
 ```go
 // Efficient bulk fetching
 achievements, err := client.GetAchievements(ctx, []int{1, 2, 3, 4, 5})
@@ -199,6 +202,7 @@ worlds, err := client.GetWorlds(ctx, []int{1001, 1002, 1003})
 ```
 
 ### ID Lists
+
 ```go
 // Get all available IDs
 achievementIDs, err := client.GetAchievementIDs(ctx)
@@ -207,17 +211,19 @@ worldIDs, err := client.GetWorldIDs(ctx)
 ```
 
 ### Pagination
+
 ```go
 // Get first page of items (50 per page)
-items, pagination, err := client.GetItemsPage(ctx, 
-    WithPage(0), 
+items, pagination, err := client.GetItemsPage(ctx,
+    WithPage(0),
     WithPageSize(50))
 
-fmt.Printf("Page %d of %d (Total: %d items)\n", 
+fmt.Printf("Page %d of %d (Total: %d items)\n",
     pagination.Page+1, pagination.PageTotal, pagination.Total)
 ```
 
 ### Localization
+
 ```go
 // Get achievement in German
 achievement, err := client.GetAchievement(ctx, 1, WithLang(LanguageGerman))
@@ -228,16 +234,18 @@ client := NewClient(WithLanguage(LanguageFrench))
 
 ## Type Safety Examples
 
-### Before (interface{})
+### Before (any)
+
 ```go
 // Old way - no type safety
 response, err := client.GetAchievement(1)
-data := response.(map[string]interface{})
+data := response.(map[string]any)
 name := data["name"].(string)  // Runtime panic risk!
-tiers := data["tiers"].([]interface{})  // More casting needed
+tiers := data["tiers"].([]any)  // More casting needed
 ```
 
 ### After (Typed)
+
 ```go
 // New way - full type safety
 achievement, err := client.GetAchievement(ctx, 1)
@@ -266,6 +274,7 @@ if err != nil {
 ## Performance Features
 
 ### Bulk Operations
+
 ```go
 // Instead of 100 individual requests
 items := make([]*Item, 100)
@@ -279,6 +288,7 @@ items, err := client.GetItems(ctx, itemIDs[:100])  // Much faster!
 ```
 
 ### Context Support
+
 ```go
 // Timeout support
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -326,6 +336,7 @@ go run *.go
 ```
 
 This will run a comprehensive test of all major functionality, demonstrating:
+
 - Type safety in action
 - Bulk operations
 - Error handling
