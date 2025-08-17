@@ -67,6 +67,12 @@ var rootCmd = &cobra.Command{
 		}
 
 		opts = append(opts, gw2api.WithUserAgent("gw2api-cli/1.0"))
+		
+		// Enable comprehensive data cache if data directory exists
+		if _, err := os.Stat("data"); err == nil {
+			opts = append(opts, gw2api.WithDataCache("data"))
+		}
+		
 		client = gw2api.NewClient(opts...)
 	},
 }

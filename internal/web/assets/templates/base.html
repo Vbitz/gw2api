@@ -1,0 +1,251 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .Title}}{{.Title}} - {{end}}Guild Wars 2 API Explorer</title>
+    <meta name="description" content="{{if .Description}}{{.Description}}{{else}}Explore Guild Wars 2 items, skills, achievements, and more with our comprehensive API browser{{end}}">
+    <meta name="keywords" content="{{if .Keywords}}{{.Keywords}}{{else}}Guild Wars 2, GW2, API, items, skills, achievements, game data{{end}}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <!-- Stylesheets -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <!-- HTMX -->
+    <script src="/static/js/htmx.min.js" defer></script>
+    
+    <!-- Custom styles for this page -->
+    {{block "head" .}}{{end}}
+</head>
+<body>
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="loading-indicator htmx-indicator">
+        <div class="loading-spinner"></div>
+        <span>Loading...</span>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container flex items-center justify-between">
+            <div class="header-brand">
+                <h1 class="header-title">
+                    <span class="brand-icon">⚔️</span>
+                    GW2 API Explorer
+                </h1>
+                {{if .BuildInfo}}
+                <div class="build-info">
+                    <span class="build-id">Build {{.BuildInfo.ID}}</span>
+                </div>
+                {{end}}
+            </div>
+            
+            <div class="header-actions">
+                <!-- Dark mode toggle -->
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <span class="theme-icon-light">☀️</span>
+                    <span class="theme-icon-dark">🌙</span>
+                </button>
+                
+                <!-- Cache stats (for debugging) -->
+                {{if .Cache}}
+                <div class="cache-stats">
+                    <span class="cache-hit-rate">Cache: {{printf "%.1f%%" .Cache.HitRate}}</span>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="main">
+        <div class="main-container">
+            <!-- Flash messages -->
+            {{if .Error}}
+            <div class="alert alert-error" role="alert">
+                <span class="alert-icon">⚠️</span>
+                <span class="alert-message">{{.Error}}</span>
+                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+            {{end}}
+            
+            {{if .Success}}
+            <div class="alert alert-success" role="alert">
+                <span class="alert-icon">✅</span>
+                <span class="alert-message">{{.Success}}</span>
+                <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+            {{end}}
+
+            <!-- Page content -->
+            {{block "content" .}}
+            <div class="welcome">
+                <h2>Welcome to GW2 API Explorer</h2>
+                <p>Explore Guild Wars 2 game data with our comprehensive API browser.</p>
+            </div>
+            {{end}}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About</h3>
+                    <p>Unofficial Guild Wars 2 API browser. Data provided by ArenaNet's official API.</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li><a href="https://wiki.guildwars2.com/wiki/API:Main" target="_blank" rel="noopener">Official API Docs</a></li>
+                        <li><a href="https://github.com/arenanet/api-cdi" target="_blank" rel="noopener">API CDI</a></li>
+                        <li><a href="/api/stats" hx-get="/api/stats" hx-target="#stats-modal">API Stats</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Tools</h3>
+                    <ul>
+                        <li><a href="#" onclick="clearCache()">Clear Cache</a></li>
+                        <li><a href="#" onclick="exportData()">Export Data</a></li>
+                        <li><a href="#" id="toggle-debug">Debug Mode</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 GW2 API Explorer. Guild Wars 2 © ArenaNet LLC. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal for stats and other overlays -->
+    <div id="modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- Content loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Base JavaScript -->
+    <script>
+        // Theme management
+        const themeToggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const newTheme = theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Modal management
+        function openModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        // Utility functions
+        function clearCache() {
+            fetch('/api/cache/clear', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Cache cleared successfully');
+                        location.reload();
+                    }
+                })
+                .catch(err => alert('Error clearing cache: ' + err.message));
+        }
+
+        function exportData() {
+            const url = new URL(window.location);
+            url.pathname = '/api/export';
+            url.searchParams.set('format', 'json');
+            window.open(url.toString(), '_blank');
+        }
+
+        // Debug mode toggle
+        document.getElementById('toggle-debug').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.body.classList.toggle('debug-mode');
+            const isDebug = document.body.classList.contains('debug-mode');
+            localStorage.setItem('debug-mode', isDebug);
+            e.target.textContent = isDebug ? 'Disable Debug' : 'Debug Mode';
+        });
+
+        // Load debug mode preference
+        if (localStorage.getItem('debug-mode') === 'true') {
+            document.body.classList.add('debug-mode');
+            document.getElementById('toggle-debug').textContent = 'Disable Debug';
+        }
+
+        // HTMX event handlers
+        document.addEventListener('htmx:configRequest', (event) => {
+            // Add loading indicator
+            event.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
+        });
+
+        document.addEventListener('htmx:beforeRequest', (event) => {
+            // Show loading indicator
+            document.getElementById('loading-indicator').style.display = 'flex';
+        });
+
+        document.addEventListener('htmx:afterRequest', (event) => {
+            // Hide loading indicator
+            document.getElementById('loading-indicator').style.display = 'none';
+        });
+
+        document.addEventListener('htmx:responseError', (event) => {
+            // Handle errors
+            const errorMsg = event.detail.xhr.responseText || 'An error occurred';
+            openModal('Error', `<p class="error-message">${errorMsg}</p>`);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + K for search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const searchInput = document.querySelector('.search-input');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+            
+            // Escape to close modal
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+
+    <!-- Page-specific JavaScript -->
+    {{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

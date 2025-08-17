@@ -2,6 +2,7 @@ package gw2api
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -16,8 +17,14 @@ type ItemSearchOptions struct {
 }
 
 // SearchItems searches for items based on the provided criteria
-// This function fetches all items and filters them locally since the GW2 API doesn't support server-side search
+// This function uses cached data if available, otherwise falls back to API
 func (c *Client) SearchItems(ctx context.Context, options ItemSearchOptions) ([]*Item, error) {
+	// Try cache first if available
+	if c.dataCache != nil && c.dataCache.GetItemCache().IsLoaded() {
+		return c.dataCache.GetItemCache().SearchItems(options), nil
+	}
+	
+	// Fallback to API-based search (limited for performance)
 	// Get all item IDs first
 	allIDs, err := c.GetItemIDs(ctx)
 	if err != nil {
@@ -26,9 +33,19 @@ func (c *Client) SearchItems(ctx context.Context, options ItemSearchOptions) ([]
 
 	var results []*Item
 	var count int
+	
+	// Set reasonable limits for demo purposes when using API
+	maxItemsToCheck := 1000  // Reduced from 2000 for better performance
+	if options.Limit == 0 {
+		options.Limit = 50   // Default limit if none specified
+	}
+	
+	if len(allIDs) > maxItemsToCheck {
+		allIDs = allIDs[:maxItemsToCheck]
+	}
 
-	// Process items in batches to avoid overwhelming the API
-	batchSize := 200
+	// Process items in smaller batches
+	batchSize := 100
 	for i := 0; i < len(allIDs); i += batchSize {
 		end := i + batchSize
 		if end > len(allIDs) {
@@ -128,5 +145,43 @@ func (c *Client) GetItemsByNameAndRarity(ctx context.Context, name, rarity strin
 		Name:     name,
 		Rarities: []string{rarity},
 		Limit:    limit,
+	})
+}
+
+// SkillSearchOptions represents search options for skills
+type SkillSearchOptions struct {
+	Name       string // Partial name to search for
+	Profession string // Filter by profession
+	Type       string // Filter by skill type
+	Limit      int    // Maximum number of results to return (0 = no limit)
+}
+
+// SearchSkills searches for skills based on the provided criteria
+// This function uses cached data if available, otherwise falls back to API
+func (c *Client) SearchSkills(ctx context.Context, options SkillSearchOptions) ([]*Skill, error) {
+	// Try cache first if available
+	if c.dataCache != nil && c.dataCache.GetSkillCache().IsLoaded() {
+		return c.dataCache.GetSkillCache().SearchSkills(options.Name, options.Profession, options.Type, options.Limit), nil
+	}
+	
+	// Fallback to API-based search (limited for performance)
+	// Note: This is a simplified fallback - in practice you might want to implement
+	// a more sophisticated API-based search or just return an error
+	return nil, fmt.Errorf("skill search requires data cache to be loaded")
+}
+
+// GetSkillsByName finds skills by partial name match
+func (c *Client) GetSkillsByName(ctx context.Context, name string, limit int) ([]*Skill, error) {
+	return c.SearchSkills(ctx, SkillSearchOptions{
+		Name:  name,
+		Limit: limit,
+	})
+}
+
+// GetSkillsByProfession finds skills by profession
+func (c *Client) GetSkillsByProfession(ctx context.Context, profession string, limit int) ([]*Skill, error) {
+	return c.SearchSkills(ctx, SkillSearchOptions{
+		Profession: profession,
+		Limit:      limit,
 	})
 }

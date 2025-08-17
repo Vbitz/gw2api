@@ -24,11 +24,20 @@ func main() {
 	)
 	flag.Parse()
 
-	// Create GW2 API client
-	gw2Client := gw2api.NewClient(
+	// Create GW2 API client with cache if available
+	var clientOptions []gw2api.ClientOption
+	clientOptions = append(clientOptions, 
 		gw2api.WithTimeout(30*time.Second),
 		gw2api.WithUserAgent("gw2api-server/1.0"),
 	)
+	
+	// Enable comprehensive data cache if data directory exists
+	if _, err := os.Stat("data"); err == nil {
+		clientOptions = append(clientOptions, gw2api.WithDataCache("data"))
+		log.Println("Data cache enabled from data/ directory")
+	}
+	
+	gw2Client := gw2api.NewClient(clientOptions...)
 
 	// Channel to handle shutdown signals
 	stop := make(chan os.Signal, 1)
@@ -60,7 +69,7 @@ func main() {
 	// Start web server if requested
 	var server *http.Server
 	if !*discordOnly {
-		webServer := web.NewServer(gw2Client)
+		webServer := web.NewEnhancedServer(gw2Client)
 		mux := webServer.SetupRoutes()
 
 		server = &http.Server{

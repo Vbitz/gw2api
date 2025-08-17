@@ -29,7 +29,7 @@ type ItemDetails struct {
 	Defense               int            `json:"defense,omitempty"`
 	InfusionSlots         []InfusionSlot `json:"infusion_slots,omitempty"`
 	InfixUpgrade          *InfixUpgrade  `json:"infix_upgrade,omitempty"`
-	SuffixItemID          string         `json:"suffix_item_id,omitempty"`
+	SuffixItemID          int            `json:"suffix_item_id,omitempty"`
 	SecondarySuffixItemID string         `json:"secondary_suffix_item_id,omitempty"`
 	StatChoices           []int          `json:"stat_choices,omitempty"`
 

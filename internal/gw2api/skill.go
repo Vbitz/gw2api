@@ -32,7 +32,7 @@ type SkillFact struct {
 	Text          string  `json:"text,omitempty"`
 	Type          string  `json:"type"`
 	Icon          string  `json:"icon,omitempty"`
-	Value         int     `json:"value,omitempty"`
+	Value         any     `json:"value,omitempty"`
 	Target        string  `json:"target,omitempty"`
 	Status        string  `json:"status,omitempty"`
 	Description   string  `json:"description,omitempty"`
@@ -44,7 +44,7 @@ type SkillFact struct {
 	HitCount      int     `json:"hit_count,omitempty"`
 	DmgMultiplier float64 `json:"dmg_multiplier,omitempty"`
 	Distance      int     `json:"distance,omitempty"`
-	Prefix        string  `json:"prefix,omitempty"`
+	Prefix        any     `json:"prefix,omitempty"`
 }
 
 // TraitedFact represents a skill fact that is modified by traits

@@ -21,11 +21,12 @@ const (
 
 // Client provides access to the Guild Wars 2 API
 type Client struct {
-	baseURL    string
+	baseURL   string
 	httpClient *http.Client
 	apiKey     string
 	language   Language
 	userAgent  string
+	dataCache  *DataCache
 }
 
 // ClientOption configures a Client
@@ -56,6 +57,28 @@ func WithTimeout(timeout time.Duration) ClientOption {
 func WithUserAgent(ua string) ClientOption {
 	return func(c *Client) {
 		c.userAgent = ua
+	}
+}
+
+// WithDataCache enables comprehensive data caching and loads data from the specified directory
+func WithDataCache(dataDir string) ClientOption {
+	return func(c *Client) {
+		c.dataCache = NewDataCache()
+		if err := c.dataCache.LoadFromDirectory(dataDir); err != nil {
+			// Log error but don't fail client creation
+			fmt.Printf("Warning: Failed to load data cache from %s: %v\n", dataDir, err)
+		}
+	}
+}
+
+// WithItemCache enables item caching and loads items from the specified file (deprecated - use WithDataCache)
+func WithItemCache(filePath string) ClientOption {
+	return func(c *Client) {
+		c.dataCache = NewDataCache()
+		if err := c.dataCache.GetItemCache().LoadFromFile(filePath); err != nil {
+			// Log error but don't fail client creation
+			fmt.Printf("Warning: Failed to load item cache from %s: %v\n", filePath, err)
+		}
 	}
 }
 
@@ -430,6 +453,61 @@ func (c *Client) GetItem(ctx context.Context, id int, options ...RequestOption) 
 
 // GetItems returns multiple items by IDs
 func (c *Client) GetItems(ctx context.Context, ids []int, options ...RequestOption) ([]*Item, error) {
+	// Try cache first if available
+	if c.dataCache != nil && c.dataCache.GetItemCache().IsLoaded() {
+		cachedItems := c.dataCache.GetItemCache().GetByIDs(ids)
+		if len(cachedItems) == len(ids) {
+			// All items found in cache
+			return cachedItems, nil
+		}
+		
+		// Some items found in cache, determine which ones to fetch from API
+		cachedMap := make(map[int]*Item)
+		for _, item := range cachedItems {
+			cachedMap[item.ID] = item
+		}
+		
+		// Find missing IDs
+		var missingIDs []int
+		for _, id := range ids {
+			if _, found := cachedMap[id]; !found {
+				missingIDs = append(missingIDs, id)
+			}
+		}
+		
+		if len(missingIDs) == 0 {
+			// All items were in cache
+			result := make([]*Item, len(ids))
+			for i, id := range ids {
+				result[i] = cachedMap[id]
+			}
+			return result, nil
+		}
+		
+		// Fetch missing items from API
+		apiResults, err := GetByIDs[Item](ctx, c, "/v2/items", missingIDs, options...)
+		if err != nil {
+			// Return cached items even if API fails
+			return cachedItems, nil
+		}
+		
+		// Combine cached and API results
+		for i := range apiResults {
+			cachedMap[apiResults[i].ID] = &apiResults[i]
+		}
+		
+		// Build result in original order
+		result := make([]*Item, len(ids))
+		for i, id := range ids {
+			if item, found := cachedMap[id]; found {
+				result[i] = item
+			}
+		}
+		
+		return result, nil
+	}
+	
+	// Fallback to API only
 	results, err := GetByIDs[Item](ctx, c, "/v2/items", ids, options...)
 	if err != nil {
 		return nil, err
@@ -516,6 +594,61 @@ func (c *Client) GetSkill(ctx context.Context, id int, options ...RequestOption)
 
 // GetSkills returns multiple skills by IDs
 func (c *Client) GetSkills(ctx context.Context, ids []int, options ...RequestOption) ([]*Skill, error) {
+	// Try cache first if available
+	if c.dataCache != nil && c.dataCache.GetSkillCache().IsLoaded() {
+		cachedSkills := c.dataCache.GetSkillCache().GetByIDs(ids)
+		if len(cachedSkills) == len(ids) {
+			// All skills found in cache
+			return cachedSkills, nil
+		}
+		
+		// Some skills found in cache, determine which ones to fetch from API
+		cachedMap := make(map[int]*Skill)
+		for _, skill := range cachedSkills {
+			cachedMap[skill.ID] = skill
+		}
+		
+		// Find missing IDs
+		var missingIDs []int
+		for _, id := range ids {
+			if _, found := cachedMap[id]; !found {
+				missingIDs = append(missingIDs, id)
+			}
+		}
+		
+		if len(missingIDs) == 0 {
+			// All skills were in cache
+			result := make([]*Skill, len(ids))
+			for i, id := range ids {
+				result[i] = cachedMap[id]
+			}
+			return result, nil
+		}
+		
+		// Fetch missing skills from API
+		apiResults, err := GetByIDs[Skill](ctx, c, "/v2/skills", missingIDs, options...)
+		if err != nil {
+			// Return cached skills even if API fails
+			return cachedSkills, nil
+		}
+		
+		// Combine cached and API results
+		for i := range apiResults {
+			cachedMap[apiResults[i].ID] = &apiResults[i]
+		}
+		
+		// Build result in original order
+		result := make([]*Skill, len(ids))
+		for i, id := range ids {
+			if skill, found := cachedMap[id]; found {
+				result[i] = skill
+			}
+		}
+		
+		return result, nil
+	}
+	
+	// Fallback to API only
 	results, err := GetByIDs[Skill](ctx, c, "/v2/skills", ids, options...)
 	if err != nil {
 		return nil, err
@@ -554,4 +687,1145 @@ func (c *Client) GetAllWorlds(ctx context.Context, options ...RequestOption) ([]
 		ptrs[i] = &results[i]
 	}
 	return ptrs, nil
+}
+
+// ========================
+// Account Endpoints
+// ========================
+
+// GetAccount returns basic account information
+func (c *Client) GetAccount(ctx context.Context, options ...RequestOption) (*Account, error) {
+	return GetSingle[Account](ctx, c, "/v2/account", options...)
+}
+
+// GetAccountAchievements returns account achievements
+func (c *Client) GetAccountAchievements(ctx context.Context, options ...RequestOption) ([]AccountAchievement, error) {
+	return GetAll[AccountAchievement](ctx, c, "/v2/account/achievements", options...)
+}
+
+// GetAccountBank returns account bank contents
+func (c *Client) GetAccountBank(ctx context.Context, options ...RequestOption) ([]BankSlot, error) {
+	return GetAll[BankSlot](ctx, c, "/v2/account/bank", options...)
+}
+
+// GetAccountBuildStorage returns build storage templates
+func (c *Client) GetAccountBuildStorage(ctx context.Context, options ...RequestOption) ([]BuildStorage, error) {
+	return GetAll[BuildStorage](ctx, c, "/v2/account/buildstorage", options...)
+}
+
+// GetAccountDailyCrafting returns daily crafting progress
+func (c *Client) GetAccountDailyCrafting(ctx context.Context, options ...RequestOption) ([]DailyCrafting, error) {
+	return GetAll[DailyCrafting](ctx, c, "/v2/account/dailycrafting", options...)
+}
+
+// GetAccountDungeons returns completed dungeon paths
+func (c *Client) GetAccountDungeons(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/account/dungeons", options...)
+}
+
+// GetAccountDyes returns unlocked dyes
+func (c *Client) GetAccountDyes(ctx context.Context, options ...RequestOption) ([]Dye, error) {
+	return GetAll[Dye](ctx, c, "/v2/account/dyes", options...)
+}
+
+// GetAccountEmotes returns unlocked emotes
+func (c *Client) GetAccountEmotes(ctx context.Context, options ...RequestOption) ([]Emote, error) {
+	return GetAll[Emote](ctx, c, "/v2/account/emotes", options...)
+}
+
+// GetAccountFinishers returns unlocked finishers
+func (c *Client) GetAccountFinishers(ctx context.Context, options ...RequestOption) ([]Finisher, error) {
+	return GetAll[Finisher](ctx, c, "/v2/account/finishers", options...)
+}
+
+// GetAccountGliders returns unlocked gliders
+func (c *Client) GetAccountGliders(ctx context.Context, options ...RequestOption) ([]Glider, error) {
+	return GetAll[Glider](ctx, c, "/v2/account/gliders", options...)
+}
+
+// GetAccountHome returns home instance information
+func (c *Client) GetAccountHome(ctx context.Context, options ...RequestOption) (*HomeInfo, error) {
+	return GetSingle[HomeInfo](ctx, c, "/v2/account/home", options...)
+}
+
+// GetAccountHomeCats returns home instance cats
+func (c *Client) GetAccountHomeCats(ctx context.Context, options ...RequestOption) ([]HomeCat, error) {
+	return GetAll[HomeCat](ctx, c, "/v2/account/home/cats", options...)
+}
+
+// GetAccountHomeNodes returns home instance nodes
+func (c *Client) GetAccountHomeNodes(ctx context.Context, options ...RequestOption) ([]HomeNode, error) {
+	return GetAll[HomeNode](ctx, c, "/v2/account/home/nodes", options...)
+}
+
+// GetAccountHomestead returns homestead information
+func (c *Client) GetAccountHomestead(ctx context.Context, options ...RequestOption) (*Homestead, error) {
+	return GetSingle[Homestead](ctx, c, "/v2/account/homestead", options...)
+}
+
+// GetAccountHomesteadDecorations returns homestead decorations
+func (c *Client) GetAccountHomesteadDecorations(ctx context.Context, options ...RequestOption) ([]HomesteadDecoration, error) {
+	return GetAll[HomesteadDecoration](ctx, c, "/v2/account/homestead/decorations", options...)
+}
+
+// GetAccountHomesteadGlyphs returns homestead glyphs
+func (c *Client) GetAccountHomesteadGlyphs(ctx context.Context, options ...RequestOption) ([]HomesteadGlyph, error) {
+	return GetAll[HomesteadGlyph](ctx, c, "/v2/account/homestead/glyphs", options...)
+}
+
+// GetAccountInventory returns shared inventory slots
+func (c *Client) GetAccountInventory(ctx context.Context, options ...RequestOption) ([]InventorySlot, error) {
+	return GetAll[InventorySlot](ctx, c, "/v2/account/inventory", options...)
+}
+
+// GetAccountJadeBots returns unlocked jade bots
+func (c *Client) GetAccountJadeBots(ctx context.Context, options ...RequestOption) ([]JadeBot, error) {
+	return GetAll[JadeBot](ctx, c, "/v2/account/jadebots", options...)
+}
+
+// GetAccountLegendaryArmory returns legendary armory
+func (c *Client) GetAccountLegendaryArmory(ctx context.Context, options ...RequestOption) ([]LegendaryArmory, error) {
+	return GetAll[LegendaryArmory](ctx, c, "/v2/account/legendaryarmory", options...)
+}
+
+// GetAccountLuck returns account luck
+func (c *Client) GetAccountLuck(ctx context.Context, options ...RequestOption) ([]Luck, error) {
+	return GetAll[Luck](ctx, c, "/v2/account/luck", options...)
+}
+
+// GetAccountMail returns account mail
+func (c *Client) GetAccountMail(ctx context.Context, options ...RequestOption) ([]Mail, error) {
+	return GetAll[Mail](ctx, c, "/v2/account/mail", options...)
+}
+
+// GetAccountMailCarriers returns unlocked mail carriers
+func (c *Client) GetAccountMailCarriers(ctx context.Context, options ...RequestOption) ([]MailCarrier, error) {
+	return GetAll[MailCarrier](ctx, c, "/v2/account/mailcarriers", options...)
+}
+
+// GetAccountMapChests returns opened map chests
+func (c *Client) GetAccountMapChests(ctx context.Context, options ...RequestOption) ([]MapChest, error) {
+	return GetAll[MapChest](ctx, c, "/v2/account/mapchests", options...)
+}
+
+// GetAccountMasteries returns account masteries
+func (c *Client) GetAccountMasteries(ctx context.Context, options ...RequestOption) ([]AccountMastery, error) {
+	return GetAll[AccountMastery](ctx, c, "/v2/account/masteries", options...)
+}
+
+// GetAccountMasteryPoints returns mastery points
+func (c *Client) GetAccountMasteryPoints(ctx context.Context, options ...RequestOption) ([]MasteryPoint, error) {
+	return GetAll[MasteryPoint](ctx, c, "/v2/account/mastery/points", options...)
+}
+
+// GetAccountMaterials returns materials storage
+func (c *Client) GetAccountMaterials(ctx context.Context, options ...RequestOption) ([]MaterialSlot, error) {
+	return GetAll[MaterialSlot](ctx, c, "/v2/account/materials", options...)
+}
+
+// GetAccountMinis returns unlocked miniatures
+func (c *Client) GetAccountMinis(ctx context.Context, options ...RequestOption) ([]Mini, error) {
+	return GetAll[Mini](ctx, c, "/v2/account/minis", options...)
+}
+
+// GetAccountMounts returns mount information
+func (c *Client) GetAccountMounts(ctx context.Context, options ...RequestOption) (*MountInfo, error) {
+	return GetSingle[MountInfo](ctx, c, "/v2/account/mounts", options...)
+}
+
+// GetAccountMountSkins returns unlocked mount skins
+func (c *Client) GetAccountMountSkins(ctx context.Context, options ...RequestOption) ([]MountSkin, error) {
+	return GetAll[MountSkin](ctx, c, "/v2/account/mounts/skins", options...)
+}
+
+// GetAccountMountTypes returns unlocked mount types
+func (c *Client) GetAccountMountTypes(ctx context.Context, options ...RequestOption) ([]MountType, error) {
+	return GetAll[MountType](ctx, c, "/v2/account/mounts/types", options...)
+}
+
+// GetAccountNovelties returns unlocked novelties
+func (c *Client) GetAccountNovelties(ctx context.Context, options ...RequestOption) ([]Novelty, error) {
+	return GetAll[Novelty](ctx, c, "/v2/account/novelties", options...)
+}
+
+// GetAccountOutfits returns unlocked outfits
+func (c *Client) GetAccountOutfits(ctx context.Context, options ...RequestOption) ([]Outfit, error) {
+	return GetAll[Outfit](ctx, c, "/v2/account/outfits", options...)
+}
+
+// GetAccountProgression returns account progression
+func (c *Client) GetAccountProgression(ctx context.Context, options ...RequestOption) ([]Progression, error) {
+	return GetAll[Progression](ctx, c, "/v2/account/progression", options...)
+}
+
+// GetAccountPvPHeroes returns unlocked PvP heroes
+func (c *Client) GetAccountPvPHeroes(ctx context.Context, options ...RequestOption) ([]AccountPvPHero, error) {
+	return GetAll[AccountPvPHero](ctx, c, "/v2/account/pvp/heroes", options...)
+}
+
+// GetAccountRaids returns completed raid encounters
+func (c *Client) GetAccountRaids(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/account/raids", options...)
+}
+
+// GetAccountRecipes returns unlocked recipes
+func (c *Client) GetAccountRecipes(ctx context.Context, options ...RequestOption) ([]Recipe, error) {
+	return GetAll[Recipe](ctx, c, "/v2/account/recipes", options...)
+}
+
+// GetAccountSkiffs returns unlocked skiffs
+func (c *Client) GetAccountSkiffs(ctx context.Context, options ...RequestOption) ([]Skiff, error) {
+	return GetAll[Skiff](ctx, c, "/v2/account/skiffs", options...)
+}
+
+// GetAccountSkins returns unlocked skins
+func (c *Client) GetAccountSkins(ctx context.Context, options ...RequestOption) ([]Skin, error) {
+	return GetAll[Skin](ctx, c, "/v2/account/skins", options...)
+}
+
+// GetAccountTitles returns unlocked titles
+func (c *Client) GetAccountTitles(ctx context.Context, options ...RequestOption) ([]UnlockedTitle, error) {
+	return GetAll[UnlockedTitle](ctx, c, "/v2/account/titles", options...)
+}
+
+// GetAccountWallet returns account wallet
+func (c *Client) GetAccountWallet(ctx context.Context, options ...RequestOption) ([]WalletCurrency, error) {
+	return GetAll[WalletCurrency](ctx, c, "/v2/account/wallet", options...)
+}
+
+// GetAccountWizardsVaultDaily returns daily wizard's vault objectives
+func (c *Client) GetAccountWizardsVaultDaily(ctx context.Context, options ...RequestOption) ([]WizardsVaultDaily, error) {
+	return GetAll[WizardsVaultDaily](ctx, c, "/v2/account/wizardsvault/daily", options...)
+}
+
+// GetAccountWizardsVaultListings returns wizard's vault listings
+func (c *Client) GetAccountWizardsVaultListings(ctx context.Context, options ...RequestOption) ([]WizardsVaultListing, error) {
+	return GetAll[WizardsVaultListing](ctx, c, "/v2/account/wizardsvault/listings", options...)
+}
+
+// GetAccountWizardsVaultSpecial returns special wizard's vault objectives
+func (c *Client) GetAccountWizardsVaultSpecial(ctx context.Context, options ...RequestOption) ([]WizardsVaultSpecial, error) {
+	return GetAll[WizardsVaultSpecial](ctx, c, "/v2/account/wizardsvault/special", options...)
+}
+
+// GetAccountWizardsVaultWeekly returns weekly wizard's vault objectives
+func (c *Client) GetAccountWizardsVaultWeekly(ctx context.Context, options ...RequestOption) ([]WizardsVaultWeekly, error) {
+	return GetAll[WizardsVaultWeekly](ctx, c, "/v2/account/wizardsvault/weekly", options...)
+}
+
+// GetAccountWorldBosses returns defeated world bosses
+func (c *Client) GetAccountWorldBosses(ctx context.Context, options ...RequestOption) ([]WorldBoss, error) {
+	return GetAll[WorldBoss](ctx, c, "/v2/account/worldbosses", options...)
+}
+
+// GetAccountWvW returns WvW account information
+func (c *Client) GetAccountWvW(ctx context.Context, options ...RequestOption) (*WvWInfo, error) {
+	return GetSingle[WvWInfo](ctx, c, "/v2/account/wvw", options...)
+}
+
+// ========================
+// Achievement Categories & Groups
+// ========================
+
+// GetAchievementCategoryIDs returns all achievement category IDs
+func (c *Client) GetAchievementCategoryIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/achievements/categories", options...)
+}
+
+// GetAchievementCategory returns a specific achievement category by ID
+func (c *Client) GetAchievementCategory(ctx context.Context, id int, options ...RequestOption) (*AchievementCategory, error) {
+	return GetByID[AchievementCategory](ctx, c, "/v2/achievements/categories", id, options...)
+}
+
+// GetAchievementCategories returns multiple achievement categories by IDs
+func (c *Client) GetAchievementCategories(ctx context.Context, ids []int, options ...RequestOption) ([]*AchievementCategory, error) {
+	results, err := GetByIDs[AchievementCategory](ctx, c, "/v2/achievements/categories", ids, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	ptrs := make([]*AchievementCategory, len(results))
+	for i := range results {
+		ptrs[i] = &results[i]
+	}
+	return ptrs, nil
+}
+
+// GetAchievementGroupIDs returns all achievement group IDs
+func (c *Client) GetAchievementGroupIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/achievements/groups", options...)
+}
+
+// GetAchievementGroup returns a specific achievement group by ID
+func (c *Client) GetAchievementGroup(ctx context.Context, id string, options ...RequestOption) (*AchievementGroup, error) {
+	// Note: This would need a string-based GetByID variant
+	return GetSingle[AchievementGroup](ctx, c, "/v2/achievements/groups/"+id, options...)
+}
+
+// ========================
+// Missing General Endpoints
+// ========================
+
+// GetColorIDs returns all available color IDs
+func (c *Client) GetColorIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/colors", options...)
+}
+
+// GetColor returns a specific color by ID
+func (c *Client) GetColor(ctx context.Context, id int, options ...RequestOption) (*Color, error) {
+	return GetByID[Color](ctx, c, "/v2/colors", id, options...)
+}
+
+// GetColors returns multiple colors by IDs
+func (c *Client) GetColors(ctx context.Context, ids []int, options ...RequestOption) ([]*Color, error) {
+	results, err := GetByIDs[Color](ctx, c, "/v2/colors", ids, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	ptrs := make([]*Color, len(results))
+	for i := range results {
+		ptrs[i] = &results[i]
+	}
+	return ptrs, nil
+}
+
+// GetCommerceListings returns commerce listings
+func (c *Client) GetCommerceListings(ctx context.Context, options ...RequestOption) ([]Listing, error) {
+	return GetAll[Listing](ctx, c, "/v2/commerce/listings", options...)
+}
+
+// GetCommerceExchange returns gem/gold exchange rates
+func (c *Client) GetCommerceExchange(ctx context.Context, options ...RequestOption) (*ExchangeRate, error) {
+	return GetSingle[ExchangeRate](ctx, c, "/v2/commerce/exchange", options...)
+}
+
+// GetCommerceDelivery returns commerce delivery box
+func (c *Client) GetCommerceDelivery(ctx context.Context, options ...RequestOption) (*DeliveryItem, error) {
+	return GetSingle[DeliveryItem](ctx, c, "/v2/commerce/delivery", options...)
+}
+
+// GetCommerceTransactions returns trading post transactions
+func (c *Client) GetCommerceTransactions(ctx context.Context, options ...RequestOption) ([]Transaction, error) {
+	return GetAll[Transaction](ctx, c, "/v2/commerce/transactions", options...)
+}
+
+// GetContinentIDs returns all continent IDs
+func (c *Client) GetContinentIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/continents", options...)
+}
+
+// GetContinent returns a specific continent by ID
+func (c *Client) GetContinent(ctx context.Context, id int, options ...RequestOption) (*Continent, error) {
+	return GetByID[Continent](ctx, c, "/v2/continents", id, options...)
+}
+
+// GetCreateSubtoken creates a subtoken
+func (c *Client) GetCreateSubtoken(ctx context.Context, options ...RequestOption) (*CreateSubtoken, error) {
+	return GetSingle[CreateSubtoken](ctx, c, "/v2/createsubtoken", options...)
+}
+
+// GetDailyCrafting returns daily crafting items
+func (c *Client) GetDailyCrafting(ctx context.Context, options ...RequestOption) ([]DailyCraftingItem, error) {
+	return GetAll[DailyCraftingItem](ctx, c, "/v2/dailycrafting", options...)
+}
+
+// GetDungeonIDs returns all dungeon IDs
+func (c *Client) GetDungeonIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/dungeons", options...)
+}
+
+// GetDungeon returns a specific dungeon by ID
+func (c *Client) GetDungeon(ctx context.Context, id string, options ...RequestOption) (*Dungeon, error) {
+	return GetSingle[Dungeon](ctx, c, "/v2/dungeons/"+id, options...)
+}
+
+// GetEmblem returns emblem information
+func (c *Client) GetEmblem(ctx context.Context, options ...RequestOption) (*Emblem, error) {
+	return GetSingle[Emblem](ctx, c, "/v2/emblem", options...)
+}
+
+// GetEmoteIDs returns all emote IDs
+func (c *Client) GetEmoteIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/emotes", options...)
+}
+
+// GetEmoteDetail returns a specific emote by ID
+func (c *Client) GetEmoteDetail(ctx context.Context, id string, options ...RequestOption) (*EmoteDetail, error) {
+	return GetSingle[EmoteDetail](ctx, c, "/v2/emotes/"+id, options...)
+}
+
+// GetEventIDs returns all event IDs
+func (c *Client) GetEventIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/events", options...)
+}
+
+// GetEvent returns a specific event by ID
+func (c *Client) GetEvent(ctx context.Context, id string, options ...RequestOption) (*Event, error) {
+	return GetSingle[Event](ctx, c, "/v2/events/"+id, options...)
+}
+
+// GetFileIDs returns all file IDs
+func (c *Client) GetFileIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/files", options...)
+}
+
+// GetFileDetail returns a specific file by ID
+func (c *Client) GetFileDetail(ctx context.Context, id string, options ...RequestOption) (*FileDetail, error) {
+	return GetSingle[FileDetail](ctx, c, "/v2/files/"+id, options...)
+}
+
+// GetFinisherIDs returns all finisher IDs
+func (c *Client) GetFinisherIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/finishers", options...)
+}
+
+// GetFinisher returns a specific finisher by ID
+func (c *Client) GetFinisher(ctx context.Context, id int, options ...RequestOption) (*Finisher, error) {
+	return GetByID[Finisher](ctx, c, "/v2/finishers", id, options...)
+}
+
+// GetGliderIDs returns all glider IDs
+func (c *Client) GetGliderIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/gliders", options...)
+}
+
+// GetGlider returns a specific glider by ID
+func (c *Client) GetGlider(ctx context.Context, id int, options ...RequestOption) (*Glider, error) {
+	return GetByID[Glider](ctx, c, "/v2/gliders", id, options...)
+}
+
+// GetHome returns home instance information
+func (c *Client) GetHome(ctx context.Context, options ...RequestOption) (*HomeInfo, error) {
+	return GetSingle[HomeInfo](ctx, c, "/v2/home", options...)
+}
+
+// GetHomeCats returns home instance cats
+func (c *Client) GetHomeCats(ctx context.Context, options ...RequestOption) ([]HomeCat, error) {
+	return GetAll[HomeCat](ctx, c, "/v2/home/cats", options...)
+}
+
+// GetHomeNodes returns home instance nodes
+func (c *Client) GetHomeNodes(ctx context.Context, options ...RequestOption) ([]HomeNode, error) {
+	return GetAll[HomeNode](ctx, c, "/v2/home/nodes", options...)
+}
+
+// GetHomestead returns homestead information
+func (c *Client) GetHomestead(ctx context.Context, options ...RequestOption) (*HomesteadInfo, error) {
+	return GetSingle[HomesteadInfo](ctx, c, "/v2/homestead", options...)
+}
+
+// GetHomesteadDecorationIDs returns all homestead decoration IDs
+func (c *Client) GetHomesteadDecorationIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/homestead/decorations", options...)
+}
+
+// GetHomesteadDecoration returns a specific homestead decoration by ID
+func (c *Client) GetHomesteadDecoration(ctx context.Context, id int, options ...RequestOption) (*HomesteadDecorationDetail, error) {
+	return GetByID[HomesteadDecorationDetail](ctx, c, "/v2/homestead/decorations", id, options...)
+}
+
+// GetHomesteadDecorationCategoryIDs returns all decoration category IDs
+func (c *Client) GetHomesteadDecorationCategoryIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/homestead/decorations/categories", options...)
+}
+
+// GetHomesteadDecorationCategory returns a specific decoration category by ID
+func (c *Client) GetHomesteadDecorationCategory(ctx context.Context, id int, options ...RequestOption) (*HomesteadDecorationCategory, error) {
+	return GetByID[HomesteadDecorationCategory](ctx, c, "/v2/homestead/decorations/categories", id, options...)
+}
+
+// GetHomesteadGlyphIDs returns all homestead glyph IDs
+func (c *Client) GetHomesteadGlyphIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/homestead/glyphs", options...)
+}
+
+// GetHomesteadGlyph returns a specific homestead glyph by ID
+func (c *Client) GetHomesteadGlyph(ctx context.Context, id int, options ...RequestOption) (*HomesteadGlyphDetail, error) {
+	return GetByID[HomesteadGlyphDetail](ctx, c, "/v2/homestead/glyphs", id, options...)
+}
+
+// GetItemStatIDs returns all item stat IDs
+func (c *Client) GetItemStatIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/itemstats", options...)
+}
+
+// GetItemStat returns a specific item stat by ID
+func (c *Client) GetItemStat(ctx context.Context, id int, options ...RequestOption) (*ItemStat, error) {
+	return GetByID[ItemStat](ctx, c, "/v2/itemstats", id, options...)
+}
+
+// GetJadeBotIDs returns all jade bot IDs
+func (c *Client) GetJadeBotIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/jadebots", options...)
+}
+
+// GetJadeBot returns a specific jade bot by ID
+func (c *Client) GetJadeBot(ctx context.Context, id int, options ...RequestOption) (*JadeBot, error) {
+	return GetByID[JadeBot](ctx, c, "/v2/jadebots", id, options...)
+}
+
+// GetLegendaryArmory returns legendary armory information
+func (c *Client) GetLegendaryArmory(ctx context.Context, options ...RequestOption) (*LegendaryArmoryDetail, error) {
+	return GetSingle[LegendaryArmoryDetail](ctx, c, "/v2/legendaryarmory", options...)
+}
+
+// GetLegendIDs returns all legend IDs
+func (c *Client) GetLegendIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/legends", options...)
+}
+
+// GetLegend returns a specific legend by ID
+func (c *Client) GetLegend(ctx context.Context, id string, options ...RequestOption) (*Legend, error) {
+	return GetSingle[Legend](ctx, c, "/v2/legends/"+id, options...)
+}
+
+// GetLogos returns logo information
+func (c *Client) GetLogos(ctx context.Context, options ...RequestOption) (*LogoDetail, error) {
+	return GetSingle[LogoDetail](ctx, c, "/v2/logos", options...)
+}
+
+// GetMailCarrierIDs returns all mail carrier IDs
+func (c *Client) GetMailCarrierIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/mailcarriers", options...)
+}
+
+// GetMailCarrier returns a specific mail carrier by ID
+func (c *Client) GetMailCarrier(ctx context.Context, id int, options ...RequestOption) (*MailCarrier, error) {
+	return GetByID[MailCarrier](ctx, c, "/v2/mailcarriers", id, options...)
+}
+
+// GetMapChests returns map chest information
+func (c *Client) GetMapChests(ctx context.Context, options ...RequestOption) ([]MapChest, error) {
+	return GetAll[MapChest](ctx, c, "/v2/mapchests", options...)
+}
+
+// GetMapIDs returns all map IDs
+func (c *Client) GetMapIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/maps", options...)
+}
+
+// GetMap returns a specific map by ID
+func (c *Client) GetMap(ctx context.Context, id int, options ...RequestOption) (*MapDetail, error) {
+	return GetByID[MapDetail](ctx, c, "/v2/maps", id, options...)
+}
+
+// GetMaps returns multiple maps by IDs
+func (c *Client) GetMaps(ctx context.Context, ids []int, options ...RequestOption) ([]*MapDetail, error) {
+	results, err := GetByIDs[MapDetail](ctx, c, "/v2/maps", ids, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	ptrs := make([]*MapDetail, len(results))
+	for i := range results {
+		ptrs[i] = &results[i]
+	}
+	return ptrs, nil
+}
+
+// GetMasteryIDs returns all mastery IDs
+func (c *Client) GetMasteryIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/masteries", options...)
+}
+
+// GetMastery returns a specific mastery by ID
+func (c *Client) GetMastery(ctx context.Context, id int, options ...RequestOption) (*Mastery, error) {
+	return GetByID[Mastery](ctx, c, "/v2/masteries", id, options...)
+}
+
+// GetMaterialIDs returns all material category IDs
+func (c *Client) GetMaterialIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/materials", options...)
+}
+
+// GetMaterial returns a specific material category by ID
+func (c *Client) GetMaterial(ctx context.Context, id int, options ...RequestOption) (*Material, error) {
+	return GetByID[Material](ctx, c, "/v2/materials", id, options...)
+}
+
+// GetMiniIDs returns all mini IDs
+func (c *Client) GetMiniIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/minis", options...)
+}
+
+// GetMini returns a specific mini by ID
+func (c *Client) GetMini(ctx context.Context, id int, options ...RequestOption) (*Mini, error) {
+	return GetByID[Mini](ctx, c, "/v2/minis", id, options...)
+}
+
+// GetMounts returns mount information
+func (c *Client) GetMounts(ctx context.Context, options ...RequestOption) (*MountInfo, error) {
+	return GetSingle[MountInfo](ctx, c, "/v2/mounts", options...)
+}
+
+// GetMountSkinIDs returns all mount skin IDs
+func (c *Client) GetMountSkinIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/mounts/skins", options...)
+}
+
+// GetMountSkin returns a specific mount skin by ID
+func (c *Client) GetMountSkin(ctx context.Context, id int, options ...RequestOption) (*MountSkinDetail, error) {
+	return GetByID[MountSkinDetail](ctx, c, "/v2/mounts/skins", id, options...)
+}
+
+// GetMountTypeIDs returns all mount type IDs
+func (c *Client) GetMountTypeIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/mounts/types", options...)
+}
+
+// GetMountType returns a specific mount type by ID
+func (c *Client) GetMountType(ctx context.Context, id string, options ...RequestOption) (*MountTypeDetail, error) {
+	return GetSingle[MountTypeDetail](ctx, c, "/v2/mounts/types/"+id, options...)
+}
+
+// GetNoveltyIDs returns all novelty IDs
+func (c *Client) GetNoveltyIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/novelties", options...)
+}
+
+// GetNovelty returns a specific novelty by ID
+func (c *Client) GetNovelty(ctx context.Context, id int, options ...RequestOption) (*NoveltyDetail, error) {
+	return GetByID[NoveltyDetail](ctx, c, "/v2/novelties", id, options...)
+}
+
+// GetOutfitIDs returns all outfit IDs
+func (c *Client) GetOutfitIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/outfits", options...)
+}
+
+// GetOutfit returns a specific outfit by ID
+func (c *Client) GetOutfit(ctx context.Context, id int, options ...RequestOption) (*OutfitDetail, error) {
+	return GetByID[OutfitDetail](ctx, c, "/v2/outfits", id, options...)
+}
+
+// GetPetIDs returns all pet IDs
+func (c *Client) GetPetIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/pets", options...)
+}
+
+// GetPet returns a specific pet by ID
+func (c *Client) GetPet(ctx context.Context, id int, options ...RequestOption) (*Pet, error) {
+	return GetByID[Pet](ctx, c, "/v2/pets", id, options...)
+}
+
+// GetProfessionIDs returns all profession IDs
+func (c *Client) GetProfessionIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/professions", options...)
+}
+
+// GetProfession returns a specific profession by ID
+func (c *Client) GetProfession(ctx context.Context, id string, options ...RequestOption) (*Profession, error) {
+	return GetSingle[Profession](ctx, c, "/v2/professions/"+id, options...)
+}
+
+// GetQuagganIDs returns all quaggan IDs
+func (c *Client) GetQuagganIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/quaggans", options...)
+}
+
+// GetQuaggan returns a specific quaggan by ID
+func (c *Client) GetQuaggan(ctx context.Context, id string, options ...RequestOption) (*Quaggan, error) {
+	return GetSingle[Quaggan](ctx, c, "/v2/quaggans/"+id, options...)
+}
+
+// GetQuestIDs returns all quest IDs
+func (c *Client) GetQuestIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/quests", options...)
+}
+
+// GetQuest returns a specific quest by ID
+func (c *Client) GetQuest(ctx context.Context, id int, options ...RequestOption) (*Quest, error) {
+	return GetByID[Quest](ctx, c, "/v2/quests", id, options...)
+}
+
+// GetRaceIDs returns all race IDs
+func (c *Client) GetRaceIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/races", options...)
+}
+
+// GetRace returns a specific race by ID
+func (c *Client) GetRace(ctx context.Context, id string, options ...RequestOption) (*Race, error) {
+	return GetSingle[Race](ctx, c, "/v2/races/"+id, options...)
+}
+
+// GetRaidIDs returns all raid IDs
+func (c *Client) GetRaidIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/raids", options...)
+}
+
+// GetRaid returns a specific raid by ID
+func (c *Client) GetRaid(ctx context.Context, id string, options ...RequestOption) (*Raid, error) {
+	return GetSingle[Raid](ctx, c, "/v2/raids/"+id, options...)
+}
+
+// GetRecipeIDs returns all recipe IDs
+func (c *Client) GetRecipeIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/recipes", options...)
+}
+
+// GetRecipe returns a specific recipe by ID
+func (c *Client) GetRecipe(ctx context.Context, id int, options ...RequestOption) (*RecipeDetail, error) {
+	return GetByID[RecipeDetail](ctx, c, "/v2/recipes", id, options...)
+}
+
+// GetRecipeSearch returns recipe search functionality
+func (c *Client) GetRecipeSearch(ctx context.Context, options ...RequestOption) (*RecipeSearch, error) {
+	return GetSingle[RecipeSearch](ctx, c, "/v2/recipes/search", options...)
+}
+
+// GetSkiffIDs returns all skiff IDs
+func (c *Client) GetSkiffIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/skiffs", options...)
+}
+
+// GetSkiff returns a specific skiff by ID
+func (c *Client) GetSkiff(ctx context.Context, id int, options ...RequestOption) (*SkiffDetail, error) {
+	return GetByID[SkiffDetail](ctx, c, "/v2/skiffs", id, options...)
+}
+
+// GetSkinIDs returns all skin IDs
+func (c *Client) GetSkinIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/skins", options...)
+}
+
+// GetSkin returns a specific skin by ID
+func (c *Client) GetSkin(ctx context.Context, id int, options ...RequestOption) (*SkinDetail, error) {
+	return GetByID[SkinDetail](ctx, c, "/v2/skins", id, options...)
+}
+
+// GetSpecializationIDs returns all specialization IDs
+func (c *Client) GetSpecializationIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/specializations", options...)
+}
+
+// GetSpecialization returns a specific specialization by ID
+func (c *Client) GetSpecialization(ctx context.Context, id int, options ...RequestOption) (*Specialization, error) {
+	return GetByID[Specialization](ctx, c, "/v2/specializations", id, options...)
+}
+
+// GetStoryIDs returns all story IDs
+func (c *Client) GetStoryIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/stories", options...)
+}
+
+// GetStory returns a specific story by ID
+func (c *Client) GetStory(ctx context.Context, id int, options ...RequestOption) (*Story, error) {
+	return GetByID[Story](ctx, c, "/v2/stories", id, options...)
+}
+
+// GetStorySeasonIDs returns all story season IDs
+func (c *Client) GetStorySeasonIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/stories/seasons", options...)
+}
+
+// GetStorySeason returns a specific story season by ID
+func (c *Client) GetStorySeason(ctx context.Context, id string, options ...RequestOption) (*StorySeason, error) {
+	return GetSingle[StorySeason](ctx, c, "/v2/stories/seasons/"+id, options...)
+}
+
+// GetTitleIDs returns all title IDs
+func (c *Client) GetTitleIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/titles", options...)
+}
+
+// GetTitle returns a specific title by ID
+func (c *Client) GetTitle(ctx context.Context, id int, options ...RequestOption) (*Title, error) {
+	return GetByID[Title](ctx, c, "/v2/titles", id, options...)
+}
+
+// GetTokenInfo returns API token information
+func (c *Client) GetTokenInfo(ctx context.Context, options ...RequestOption) (*TokenInfo, error) {
+	return GetSingle[TokenInfo](ctx, c, "/v2/tokeninfo", options...)
+}
+
+// GetTraitIDs returns all trait IDs
+func (c *Client) GetTraitIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/traits", options...)
+}
+
+// GetTrait returns a specific trait by ID
+func (c *Client) GetTrait(ctx context.Context, id int, options ...RequestOption) (*Trait, error) {
+	return GetByID[Trait](ctx, c, "/v2/traits", id, options...)
+}
+
+// GetVendorIDs returns all vendor IDs
+func (c *Client) GetVendorIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/vendors", options...)
+}
+
+// GetVendor returns a specific vendor by ID
+func (c *Client) GetVendor(ctx context.Context, id int, options ...RequestOption) (*Vendor, error) {
+	return GetByID[Vendor](ctx, c, "/v2/vendors", id, options...)
+}
+
+// GetWizardsVaultListingIDs returns all wizard's vault listing IDs
+func (c *Client) GetWizardsVaultListingIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/wizardsvault/listings", options...)
+}
+
+// GetWizardsVaultListing returns a specific wizard's vault listing by ID
+func (c *Client) GetWizardsVaultListing(ctx context.Context, id int, options ...RequestOption) (*WizardsVaultListingDetail, error) {
+	return GetByID[WizardsVaultListingDetail](ctx, c, "/v2/wizardsvault/listings", id, options...)
+}
+
+// GetWizardsVaultObjectiveIDs returns all wizard's vault objective IDs
+func (c *Client) GetWizardsVaultObjectiveIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/wizardsvault/objectives", options...)
+}
+
+// GetWizardsVaultObjective returns a specific wizard's vault objective by ID
+func (c *Client) GetWizardsVaultObjective(ctx context.Context, id int, options ...RequestOption) (*WizardsVaultObjective, error) {
+	return GetByID[WizardsVaultObjective](ctx, c, "/v2/wizardsvault/objectives", id, options...)
+}
+
+// GetWorldBosses returns world boss information
+func (c *Client) GetWorldBosses(ctx context.Context, options ...RequestOption) (*WorldBossDetail, error) {
+	return GetSingle[WorldBossDetail](ctx, c, "/v2/worldbosses", options...)
+}
+
+// ========================
+// Character Endpoints
+// ========================
+
+// GetCharacters returns all character names
+func (c *Client) GetCharacters(ctx context.Context, options ...RequestOption) ([]Character, error) {
+	return GetAll[Character](ctx, c, "/v2/characters", options...)
+}
+
+// GetCharacterBackstory returns character backstory
+func (c *Client) GetCharacterBackstory(ctx context.Context, name string, options ...RequestOption) (*CharacterBackstory, error) {
+	return GetSingle[CharacterBackstory](ctx, c, "/v2/characters/"+name+"/backstory", options...)
+}
+
+// GetCharacterBuildTabs returns character build tabs
+func (c *Client) GetCharacterBuildTabs(ctx context.Context, name string, options ...RequestOption) ([]CharacterBuildTab, error) {
+	return GetAll[CharacterBuildTab](ctx, c, "/v2/characters/"+name+"/buildtabs", options...)
+}
+
+// GetCharacterBuildTabActive returns active build tab
+func (c *Client) GetCharacterBuildTabActive(ctx context.Context, name string, options ...RequestOption) (*CharacterBuildTabActive, error) {
+	return GetSingle[CharacterBuildTabActive](ctx, c, "/v2/characters/"+name+"/buildtabs/active", options...)
+}
+
+// GetCharacterCore returns core character information
+func (c *Client) GetCharacterCore(ctx context.Context, name string, options ...RequestOption) (*CharacterCore, error) {
+	return GetSingle[CharacterCore](ctx, c, "/v2/characters/"+name+"/core", options...)
+}
+
+// GetCharacterCrafting returns character crafting disciplines
+func (c *Client) GetCharacterCrafting(ctx context.Context, name string, options ...RequestOption) ([]CharacterCrafting, error) {
+	return GetAll[CharacterCrafting](ctx, c, "/v2/characters/"+name+"/crafting", options...)
+}
+
+// GetCharacterDungeons returns character dungeon progress
+func (c *Client) GetCharacterDungeons(ctx context.Context, name string, options ...RequestOption) ([]CharacterDungeon, error) {
+	return GetAll[CharacterDungeon](ctx, c, "/v2/characters/"+name+"/dungeons", options...)
+}
+
+// GetCharacterEquipment returns character equipment
+func (c *Client) GetCharacterEquipment(ctx context.Context, name string, options ...RequestOption) ([]CharacterEquipment, error) {
+	return GetAll[CharacterEquipment](ctx, c, "/v2/characters/"+name+"/equipment", options...)
+}
+
+// GetCharacterEquipmentTabs returns character equipment tabs
+func (c *Client) GetCharacterEquipmentTabs(ctx context.Context, name string, options ...RequestOption) ([]CharacterEquipmentTab, error) {
+	return GetAll[CharacterEquipmentTab](ctx, c, "/v2/characters/"+name+"/equipmenttabs", options...)
+}
+
+// GetCharacterEquipmentTabActive returns active equipment tab
+func (c *Client) GetCharacterEquipmentTabActive(ctx context.Context, name string, options ...RequestOption) (*CharacterEquipmentTabActive, error) {
+	return GetSingle[CharacterEquipmentTabActive](ctx, c, "/v2/characters/"+name+"/equipmenttabs/active", options...)
+}
+
+// GetCharacterHeroPoints returns character hero points
+func (c *Client) GetCharacterHeroPoints(ctx context.Context, name string, options ...RequestOption) ([]CharacterHeroPoint, error) {
+	return GetAll[CharacterHeroPoint](ctx, c, "/v2/characters/"+name+"/heropoints", options...)
+}
+
+// GetCharacterInventory returns character inventory
+func (c *Client) GetCharacterInventory(ctx context.Context, name string, options ...RequestOption) (*CharacterInventory, error) {
+	return GetSingle[CharacterInventory](ctx, c, "/v2/characters/"+name+"/inventory", options...)
+}
+
+// GetCharacterQuests returns character quests
+func (c *Client) GetCharacterQuests(ctx context.Context, name string, options ...RequestOption) ([]CharacterQuest, error) {
+	return GetAll[CharacterQuest](ctx, c, "/v2/characters/"+name+"/quests", options...)
+}
+
+// GetCharacterRecipes returns character recipes
+func (c *Client) GetCharacterRecipes(ctx context.Context, name string, options ...RequestOption) (*CharacterRecipe, error) {
+	return GetSingle[CharacterRecipe](ctx, c, "/v2/characters/"+name+"/recipes", options...)
+}
+
+// GetCharacterSAB returns character SAB progress
+func (c *Client) GetCharacterSAB(ctx context.Context, name string, options ...RequestOption) (*CharacterSAB, error) {
+	return GetSingle[CharacterSAB](ctx, c, "/v2/characters/"+name+"/sab", options...)
+}
+
+// GetCharacterSkills returns character skills
+func (c *Client) GetCharacterSkills(ctx context.Context, name string, options ...RequestOption) (*CharacterSkills, error) {
+	return GetSingle[CharacterSkills](ctx, c, "/v2/characters/"+name+"/skills", options...)
+}
+
+// GetCharacterSpecializations returns character specializations
+func (c *Client) GetCharacterSpecializations(ctx context.Context, name string, options ...RequestOption) ([]CharacterSpecialization, error) {
+	return GetAll[CharacterSpecialization](ctx, c, "/v2/characters/"+name+"/specializations", options...)
+}
+
+// GetCharacterTraining returns character training
+func (c *Client) GetCharacterTraining(ctx context.Context, name string, options ...RequestOption) ([]CharacterTraining, error) {
+	return GetAll[CharacterTraining](ctx, c, "/v2/characters/"+name+"/training", options...)
+}
+
+// ========================
+// PvP Endpoints
+// ========================
+
+// GetPvP returns PvP information
+func (c *Client) GetPvP(ctx context.Context, options ...RequestOption) (*PvPStats, error) {
+	return GetSingle[PvPStats](ctx, c, "/v2/pvp", options...)
+}
+
+// GetPvPAmuletIDs returns all PvP amulet IDs
+func (c *Client) GetPvPAmuletIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/pvp/amulets", options...)
+}
+
+// GetPvPAmulet returns a specific PvP amulet by ID
+func (c *Client) GetPvPAmulet(ctx context.Context, id int, options ...RequestOption) (*PvPAmulet, error) {
+	return GetByID[PvPAmulet](ctx, c, "/v2/pvp/amulets", id, options...)
+}
+
+// GetPvPGames returns PvP games
+func (c *Client) GetPvPGames(ctx context.Context, options ...RequestOption) ([]PvPGame, error) {
+	return GetAll[PvPGame](ctx, c, "/v2/pvp/games", options...)
+}
+
+// GetPvPHeroIDs returns all PvP hero IDs
+func (c *Client) GetPvPHeroIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/pvp/heroes", options...)
+}
+
+// GetPvPHero returns a specific PvP hero by ID
+func (c *Client) GetPvPHero(ctx context.Context, id string, options ...RequestOption) (*PvPHero, error) {
+	return GetSingle[PvPHero](ctx, c, "/v2/pvp/heroes/"+id, options...)
+}
+
+// GetPvPRankIDs returns all PvP rank IDs
+func (c *Client) GetPvPRankIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/pvp/ranks", options...)
+}
+
+// GetPvPRank returns a specific PvP rank by ID
+func (c *Client) GetPvPRank(ctx context.Context, id int, options ...RequestOption) (*PvPRank, error) {
+	return GetByID[PvPRank](ctx, c, "/v2/pvp/ranks", id, options...)
+}
+
+// GetPvPRewardTrackIDs returns all PvP reward track IDs
+func (c *Client) GetPvPRewardTrackIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/pvp/rewardtracks", options...)
+}
+
+// GetPvPRewardTrack returns a specific PvP reward track by ID
+func (c *Client) GetPvPRewardTrack(ctx context.Context, id int, options ...RequestOption) (*PvPRewardTrack, error) {
+	return GetByID[PvPRewardTrack](ctx, c, "/v2/pvp/rewardtracks", id, options...)
+}
+
+// GetPvPRuneIDs returns all PvP rune IDs
+func (c *Client) GetPvPRuneIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/pvp/runes", options...)
+}
+
+// GetPvPRune returns a specific PvP rune by ID
+func (c *Client) GetPvPRune(ctx context.Context, id int, options ...RequestOption) (*PvPRune, error) {
+	return GetByID[PvPRune](ctx, c, "/v2/pvp/runes", id, options...)
+}
+
+// GetPvPSeasonIDs returns all PvP season IDs
+func (c *Client) GetPvPSeasonIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/pvp/seasons", options...)
+}
+
+// GetPvPSeason returns a specific PvP season by ID
+func (c *Client) GetPvPSeason(ctx context.Context, id string, options ...RequestOption) (*PvPSeason, error) {
+	return GetSingle[PvPSeason](ctx, c, "/v2/pvp/seasons/"+id, options...)
+}
+
+// GetPvPSigilIDs returns all PvP sigil IDs
+func (c *Client) GetPvPSigilIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/pvp/sigils", options...)
+}
+
+// GetPvPSigil returns a specific PvP sigil by ID
+func (c *Client) GetPvPSigil(ctx context.Context, id int, options ...RequestOption) (*PvPSigil, error) {
+	return GetByID[PvPSigil](ctx, c, "/v2/pvp/sigils", id, options...)
+}
+
+// GetPvPStandings returns PvP standings
+func (c *Client) GetPvPStandings(ctx context.Context, options ...RequestOption) (*PvPStandings, error) {
+	return GetSingle[PvPStandings](ctx, c, "/v2/pvp/standings", options...)
+}
+
+// GetPvPStats returns PvP statistics
+func (c *Client) GetPvPStats(ctx context.Context, options ...RequestOption) (*PvPStats, error) {
+	return GetSingle[PvPStats](ctx, c, "/v2/pvp/stats", options...)
+}
+
+// ========================
+// WvW Endpoints
+// ========================
+
+// GetWvWAbilityIDs returns all WvW ability IDs
+func (c *Client) GetWvWAbilityIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/wvw/abilities", options...)
+}
+
+// GetWvWAbility returns a specific WvW ability by ID
+func (c *Client) GetWvWAbility(ctx context.Context, id int, options ...RequestOption) (*WvWAbility, error) {
+	return GetByID[WvWAbility](ctx, c, "/v2/wvw/abilities", id, options...)
+}
+
+// GetWvWGuilds returns WvW guilds
+func (c *Client) GetWvWGuilds(ctx context.Context, options ...RequestOption) ([]WvWGuild, error) {
+	return GetAll[WvWGuild](ctx, c, "/v2/wvw/guilds", options...)
+}
+
+// GetWvWMatches returns WvW matches
+func (c *Client) GetWvWMatches(ctx context.Context, options ...RequestOption) ([]WvWMatch, error) {
+	return GetAll[WvWMatch](ctx, c, "/v2/wvw/matches", options...)
+}
+
+// GetWvWMatchOverview returns WvW match overview
+func (c *Client) GetWvWMatchOverview(ctx context.Context, options ...RequestOption) (*WvWMatchOverview, error) {
+	return GetSingle[WvWMatchOverview](ctx, c, "/v2/wvw/matches/overview", options...)
+}
+
+// GetWvWMatchScores returns WvW match scores
+func (c *Client) GetWvWMatchScores(ctx context.Context, options ...RequestOption) (*WvWMatchScores, error) {
+	return GetSingle[WvWMatchScores](ctx, c, "/v2/wvw/matches/scores", options...)
+}
+
+// GetWvWMatchStats returns WvW match statistics
+func (c *Client) GetWvWMatchStats(ctx context.Context, options ...RequestOption) (*WvWMatchStats, error) {
+	return GetSingle[WvWMatchStats](ctx, c, "/v2/wvw/matches/stats", options...)
+}
+
+// GetWvWObjectiveIDs returns all WvW objective IDs
+func (c *Client) GetWvWObjectiveIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/wvw/objectives", options...)
+}
+
+// GetWvWObjective returns a specific WvW objective by ID
+func (c *Client) GetWvWObjective(ctx context.Context, id string, options ...RequestOption) (*WvWObjective, error) {
+	return GetSingle[WvWObjective](ctx, c, "/v2/wvw/objectives/"+id, options...)
+}
+
+// GetWvWRankIDs returns all WvW rank IDs
+func (c *Client) GetWvWRankIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/wvw/ranks", options...)
+}
+
+// GetWvWRank returns a specific WvW rank by ID
+func (c *Client) GetWvWRank(ctx context.Context, id int, options ...RequestOption) (*WvWRank, error) {
+	return GetByID[WvWRank](ctx, c, "/v2/wvw/ranks", id, options...)
+}
+
+// GetWvWRewardTrackIDs returns all WvW reward track IDs
+func (c *Client) GetWvWRewardTrackIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/wvw/rewardtracks", options...)
+}
+
+// GetWvWRewardTrack returns a specific WvW reward track by ID
+func (c *Client) GetWvWRewardTrack(ctx context.Context, id int, options ...RequestOption) (*WvWRewardTrack, error) {
+	return GetByID[WvWRewardTrack](ctx, c, "/v2/wvw/rewardtracks", id, options...)
+}
+
+// GetWvWTimers returns WvW timers
+func (c *Client) GetWvWTimers(ctx context.Context, options ...RequestOption) (*WvWTimer, error) {
+	return GetSingle[WvWTimer](ctx, c, "/v2/wvw/timers", options...)
+}
+
+// GetWvWUpgradeIDs returns all WvW upgrade IDs
+func (c *Client) GetWvWUpgradeIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/wvw/upgrades", options...)
+}
+
+// GetWvWUpgrade returns a specific WvW upgrade by ID
+func (c *Client) GetWvWUpgrade(ctx context.Context, id int, options ...RequestOption) (*WvWUpgrade, error) {
+	return GetByID[WvWUpgrade](ctx, c, "/v2/wvw/upgrades", id, options...)
+}
+
+// ========================
+// Guild Endpoints
+// ========================
+
+// GetGuild returns guild information by ID
+func (c *Client) GetGuild(ctx context.Context, id string, options ...RequestOption) (*Guild, error) {
+	return GetSingle[Guild](ctx, c, "/v2/guild/"+id, options...)
+}
+
+// GetGuildLog returns guild log
+func (c *Client) GetGuildLog(ctx context.Context, id string, options ...RequestOption) ([]GuildLog, error) {
+	return GetAll[GuildLog](ctx, c, "/v2/guild/"+id+"/log", options...)
+}
+
+// GetGuildMembers returns guild members
+func (c *Client) GetGuildMembers(ctx context.Context, id string, options ...RequestOption) ([]GuildMember, error) {
+	return GetAll[GuildMember](ctx, c, "/v2/guild/"+id+"/members", options...)
+}
+
+// GetGuildRanks returns guild ranks
+func (c *Client) GetGuildRanks(ctx context.Context, id string, options ...RequestOption) ([]GuildRank, error) {
+	return GetAll[GuildRank](ctx, c, "/v2/guild/"+id+"/ranks", options...)
+}
+
+// GetGuildStash returns guild stash
+func (c *Client) GetGuildStash(ctx context.Context, id string, options ...RequestOption) ([]GuildStash, error) {
+	return GetAll[GuildStash](ctx, c, "/v2/guild/"+id+"/stash", options...)
+}
+
+// GetGuildStorage returns guild storage
+func (c *Client) GetGuildStorage(ctx context.Context, id string, options ...RequestOption) ([]GuildStorage, error) {
+	return GetAll[GuildStorage](ctx, c, "/v2/guild/"+id+"/storage", options...)
+}
+
+// GetGuildTeams returns guild teams
+func (c *Client) GetGuildTeams(ctx context.Context, id string, options ...RequestOption) ([]GuildTeam, error) {
+	return GetAll[GuildTeam](ctx, c, "/v2/guild/"+id+"/teams", options...)
+}
+
+// GetGuildTreasury returns guild treasury
+func (c *Client) GetGuildTreasury(ctx context.Context, id string, options ...RequestOption) ([]GuildTreasury, error) {
+	return GetAll[GuildTreasury](ctx, c, "/v2/guild/"+id+"/treasury", options...)
+}
+
+// GetGuildUpgrades returns guild upgrades
+func (c *Client) GetGuildUpgrades(ctx context.Context, id string, options ...RequestOption) ([]GuildUpgrade, error) {
+	return GetAll[GuildUpgrade](ctx, c, "/v2/guild/"+id+"/upgrades", options...)
+}
+
+// GetGuildPermissionIDs returns all guild permission IDs
+func (c *Client) GetGuildPermissionIDs(ctx context.Context, options ...RequestOption) ([]string, error) {
+	return GetAll[string](ctx, c, "/v2/guild/permissions", options...)
+}
+
+// GetGuildPermission returns a specific guild permission by ID
+func (c *Client) GetGuildPermission(ctx context.Context, id string, options ...RequestOption) (*GuildPermission, error) {
+	return GetSingle[GuildPermission](ctx, c, "/v2/guild/permissions/"+id, options...)
+}
+
+// GetGuildSearch returns guild search functionality
+func (c *Client) GetGuildSearch(ctx context.Context, options ...RequestOption) (*GuildSearch, error) {
+	return GetSingle[GuildSearch](ctx, c, "/v2/guild/search", options...)
+}
+
+// GetGuildUpgradeDetailIDs returns all guild upgrade detail IDs
+func (c *Client) GetGuildUpgradeDetailIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/guild/upgrades", options...)
+}
+
+// GetGuildUpgradeDetail returns a specific guild upgrade detail by ID
+func (c *Client) GetGuildUpgradeDetail(ctx context.Context, id int, options ...RequestOption) (*GuildUpgradeDetail, error) {
+	return GetByID[GuildUpgradeDetail](ctx, c, "/v2/guild/upgrades", id, options...)
 }
