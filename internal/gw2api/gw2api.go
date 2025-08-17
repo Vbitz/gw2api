@@ -514,6 +514,20 @@ func (c *Client) GetSkill(ctx context.Context, id int, options ...RequestOption)
 	return GetByID[Skill](ctx, c, "/v2/skills", id, options...)
 }
 
+// GetSkills returns multiple skills by IDs
+func (c *Client) GetSkills(ctx context.Context, ids []int, options ...RequestOption) ([]*Skill, error) {
+	results, err := GetByIDs[Skill](ctx, c, "/v2/skills", ids, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	ptrs := make([]*Skill, len(results))
+	for i := range results {
+		ptrs[i] = &results[i]
+	}
+	return ptrs, nil
+}
+
 // GetAllCurrencies returns all currencies
 func (c *Client) GetAllCurrencies(ctx context.Context, options ...RequestOption) ([]*Currency, error) {
 	results, err := GetAll[Currency](ctx, c, "/v2/currencies", options...)

@@ -183,9 +183,59 @@ var achievementsGetCmd = &cobra.Command{
 
 // Placeholder commands
 var currenciesCmd = &cobra.Command{Use: "currencies", Short: "Currency operations"}
-var currenciesListCmd = &cobra.Command{Use: "list", Short: "List currencies", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
-var currenciesGetCmd = &cobra.Command{Use: "get", Short: "Get currencies", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
-var currenciesAllCmd = &cobra.Command{Use: "all", Short: "Get all currencies", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
+var currenciesListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all currency IDs",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids, err := client.GetCurrencyIDs(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		outputIDs(ids)
+	},
+}
+var currenciesGetCmd = &cobra.Command{
+	Use:   "get [id...]",
+	Short: "Get specific currencies",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids := parseIDs(args)
+
+		if len(ids) == 1 {
+			currency, err := client.GetCurrency(ctx, ids[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(currency)
+		} else {
+			currencies, err := client.GetCurrencies(ctx, ids)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(currencies)
+		}
+	},
+}
+var currenciesAllCmd = &cobra.Command{
+	Use:   "all",
+	Short: "Get all currencies",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		currencies, err := client.GetAllCurrencies(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		outputData(currencies)
+	},
+}
 
 var itemsCmd = &cobra.Command{Use: "items", Short: "Item operations"}
 var itemsListCmd = &cobra.Command{
@@ -282,16 +332,127 @@ Examples:
 }
 
 var worldsCmd = &cobra.Command{Use: "worlds", Short: "World operations"}
-var worldsListCmd = &cobra.Command{Use: "list", Short: "List worlds", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
-var worldsGetCmd = &cobra.Command{Use: "get", Short: "Get worlds", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
-var worldsAllCmd = &cobra.Command{Use: "all", Short: "Get all worlds", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
+var worldsListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all world IDs",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids, err := client.GetWorldIDs(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		outputIDs(ids)
+	},
+}
+var worldsGetCmd = &cobra.Command{
+	Use:   "get [id...]",
+	Short: "Get specific worlds",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids := parseIDs(args)
+
+		if len(ids) == 1 {
+			world, err := client.GetWorld(ctx, ids[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(world)
+		} else {
+			worlds, err := client.GetWorlds(ctx, ids)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(worlds)
+		}
+	},
+}
+var worldsAllCmd = &cobra.Command{
+	Use:   "all",
+	Short: "Get all worlds",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		worlds, err := client.GetAllWorlds(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		outputData(worlds)
+	},
+}
 
 var skillsCmd = &cobra.Command{Use: "skills", Short: "Skill operations"}
-var skillsListCmd = &cobra.Command{Use: "list", Short: "List skills", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
-var skillsGetCmd = &cobra.Command{Use: "get", Short: "Get skills", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
+var skillsListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all skill IDs",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids, err := client.GetSkillIDs(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		outputIDs(ids)
+	},
+}
+var skillsGetCmd = &cobra.Command{
+	Use:   "get [id...]",
+	Short: "Get specific skills",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids := parseIDs(args)
+
+		if len(ids) == 1 {
+			skill, err := client.GetSkill(ctx, ids[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(skill)
+		} else {
+			skills, err := client.GetSkills(ctx, ids)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(skills)
+		}
+	},
+}
 
 var commerceCmd = &cobra.Command{Use: "commerce", Short: "Commerce operations"}
-var commercePricesCmd = &cobra.Command{Use: "prices", Short: "Get prices", Run: func(cmd *cobra.Command, args []string) { fmt.Println("Not implemented yet") }}
+var commercePricesCmd = &cobra.Command{
+	Use:   "prices [item_id...]",
+	Short: "Get trading post prices",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		ids := parseIDs(args)
+
+		if len(ids) == 1 {
+			price, err := client.GetCommercePrice(ctx, ids[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(price)
+		} else {
+			prices, err := client.GetCommercePrices(ctx, ids)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			outputData(prices)
+		}
+	},
+}
 
 // Helper functions
 func parseIDs(args []string) []int {
@@ -348,6 +509,22 @@ func outputTable(data any) {
 		outputAchievementTable([]*gw2api.Achievement{v})
 	case []*gw2api.Achievement:
 		outputAchievementTable(v)
+	case *gw2api.Currency:
+		outputCurrencyTable([]*gw2api.Currency{v})
+	case []*gw2api.Currency:
+		outputCurrencyTable(v)
+	case *gw2api.World:
+		outputWorldTable([]*gw2api.World{v})
+	case []*gw2api.World:
+		outputWorldTable(v)
+	case *gw2api.Skill:
+		outputSkillTable([]*gw2api.Skill{v})
+	case []*gw2api.Skill:
+		outputSkillTable(v)
+	case *gw2api.Price:
+		outputPriceTable([]*gw2api.Price{v})
+	case []*gw2api.Price:
+		outputPriceTable(v)
 	default:
 		// Fallback to simple printing
 		fmt.Printf("%+v\n", data)
@@ -398,6 +575,99 @@ func outputAchievementTable(achievements []*gw2api.Achievement) {
 			name,
 			achievement.Type,
 			points,
+		)
+	}
+	table.Render()
+}
+
+func outputCurrencyTable(currencies []*gw2api.Currency) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header("ID", "Name", "Description", "Order")
+
+	for _, currency := range currencies {
+		name := currency.Name
+		if len(name) > 20 {
+			name = name[:17] + "..."
+		}
+
+		description := currency.Description
+		if len(description) > 50 {
+			description = description[:47] + "..."
+		}
+
+		table.Append(
+			strconv.Itoa(currency.ID),
+			name,
+			description,
+			strconv.Itoa(currency.Order),
+		)
+	}
+	table.Render()
+}
+
+func outputWorldTable(worlds []*gw2api.World) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header("ID", "Name", "Population")
+
+	for _, world := range worlds {
+		name := world.Name
+		if len(name) > 30 {
+			name = name[:27] + "..."
+		}
+
+		table.Append(
+			strconv.Itoa(world.ID),
+			name,
+			world.Population,
+		)
+	}
+	table.Render()
+}
+
+func outputSkillTable(skills []*gw2api.Skill) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header("ID", "Name", "Type", "Professions")
+
+	for _, skill := range skills {
+		name := skill.Name
+		if len(name) > 30 {
+			name = name[:27] + "..."
+		}
+
+		skillType := skill.Type
+		if skillType == "" {
+			skillType = "N/A"
+		}
+
+		professions := "N/A"
+		if len(skill.Professions) > 0 {
+			professions = strings.Join(skill.Professions, ", ")
+			if len(professions) > 20 {
+				professions = professions[:17] + "..."
+			}
+		}
+
+		table.Append(
+			strconv.Itoa(skill.ID),
+			name,
+			skillType,
+			professions,
+		)
+	}
+	table.Render()
+}
+
+func outputPriceTable(prices []*gw2api.Price) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header("Item ID", "Buy Price", "Buy Qty", "Sell Price", "Sell Qty")
+
+	for _, price := range prices {
+		table.Append(
+			strconv.Itoa(price.ID),
+			strconv.Itoa(price.Buys.UnitPrice),
+			strconv.Itoa(price.Buys.Quantity),
+			strconv.Itoa(price.Sells.UnitPrice),
+			strconv.Itoa(price.Sells.Quantity),
 		)
 	}
 	table.Render()
