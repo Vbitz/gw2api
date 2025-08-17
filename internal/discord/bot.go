@@ -293,7 +293,7 @@ func (b *Bot) handlePricesCommand(id int) (string, error) {
 	} else {
 		response += "**Buy Orders**: None\n"
 	}
-	
+
 	if price.Sells.Quantity > 0 {
 		response += fmt.Sprintf("**Sell Listings**: %d @ %d copper each", price.Sells.Quantity, price.Sells.UnitPrice)
 	} else {
