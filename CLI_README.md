@@ -119,6 +119,18 @@ ID    Name                 Description                                        Or
 
 # Get multiple items
 ./gw2api items get 100,200,300 --output table
+
+# Search for items by name
+./gw2api items search --name sword
+
+# Search for items by rarity
+./gw2api items search --rarity exotic
+
+# Search with multiple filters
+./gw2api items search --name "berserker" --rarity exotic --limit 10
+
+# Search with table output
+./gw2api items search --name sword --output table
 ```
 
 **Example Output (Table):**
@@ -128,6 +140,21 @@ ID       Name                           Type            Rarity     Level
 100      Rampager's Seer Coat of Div... Armor           Exotic     72   
 200      Rampager's Seer Pants of Di... Armor           Exotic     72   
 300      Rampager's Seer Boots of Di... Armor           Exotic     72
+```
+
+**Search Examples:**
+```bash
+# Find all exotic swords
+./gw2api items search --name sword --rarity exotic --output table
+
+# Find items with "dragon" in the name
+./gw2api items search --name dragon --limit 20
+
+# Find all legendary items
+./gw2api items search --rarity legendary
+
+# Find berserker armor pieces
+./gw2api items search --name berserker --output table
 ```
 
 ### Worlds
@@ -266,6 +293,10 @@ The CLI supports all Guild Wars 2 API languages:
 
 # Get item details for context
 ./gw2api items get 19684,19709 --output table
+
+# Find items first, then check prices
+./gw2api items search --name "eternity" --rarity legendary
+./gw2api commerce prices <item_id_from_search>
 ```
 
 ### 2. Achievement Hunting
@@ -290,6 +321,25 @@ The CLI supports all Guild Wars 2 API languages:
 ```bash
 # See all available currencies
 ./gw2api currencies all --output table
+
+# Check specific currencies
+./gw2api currencies get 1,2,3 --output table
+```
+
+### 5. Item Discovery and Search
+```bash
+# Find gear for your profession
+./gw2api items search --name "berserker" --output table
+
+# Browse by item rarity
+./gw2api items search --rarity ascended --limit 20 --output table
+
+# Look for specific weapon types
+./gw2api items search --name "greatsword" --output table
+
+# Discover exotic armor pieces
+./gw2api items search --rarity exotic --name "armor" --limit 15
+```
 
 # Check specific currencies
 ./gw2api currencies get 1,2,3 --output table
