@@ -1,19 +1,89 @@
 # Guild Wars 2 API Go Client
 
-A fully typed, comprehensive Go client library for the Guild Wars 2 API v2.
+A fully typed, comprehensive Go client library and server for the Guild Wars 2 API v2.
+
+## 🆕 New Features
+
+- **Discord Bot**: Modern slash commands for all major GW2 API endpoints
+- **Web Server**: REST API and interactive web interface  
+- **Organized Structure**: Clean separation into CLI, server, and library components
+
+## Quick Start
+
+### Server (Discord Bot + Web Interface)
+```bash
+# Build the server
+go build -o server ./cmd/server/
+
+# Run web server only
+./server -web-only
+
+# Run Discord bot only (requires token)
+./server -discord-only -discord-token="YOUR_BOT_TOKEN"
+
+# Run both (Discord bot as main interface)
+./server -discord-token="YOUR_BOT_TOKEN"
+```
+
+### CLI Tool (Original)
+```bash
+# Build the CLI
+go build -o cli ./cmd/cli/
+
+# Use the CLI
+./cli build
+./cli achievements get 1 --output table
+```
+
+## Project Structure
+
+```
+├── cmd/
+│   ├── cli/          # Command-line interface (original)
+│   └── server/       # Server (Discord bot + web server)
+├── internal/
+│   ├── gw2api/       # Core GW2 API client library
+│   ├── discord/      # Discord bot handlers
+│   └── web/          # Web server handlers
+├── web/
+│   └── static/       # Static web assets
+└── README.md, CLI_README.md, SERVER_README.md
+```
+
+## Discord Bot Commands
+
+- `/gw2-build` - Get current game build
+- `/gw2-achievement <id>` - Get achievement details
+- `/gw2-currency <id>` - Get currency info
+- `/gw2-item <id>` - Get item details
+- `/gw2-world <id>` - Get world info
+- `/gw2-skill <id>` - Get skill details
+- `/gw2-prices <item_id>` - Get trading post prices
+
+## Web API Endpoints
+
+- `GET /api/build` - Current game build
+- `GET /api/achievement?id={id}` - Achievement details
+- `GET /api/currency?id={id}` - Currency information
+- `GET /api/item?id={id}` - Item details
+- `GET /api/world?id={id}` - World information
+- `GET /api/skill?id={id}` - Skill details
+- `GET /api/prices?item_id={id}` - Trading post prices
+
+Visit `/web/` for an interactive web interface.
 
 ## Features
 
-✅ **Full Type Safety** - No more `interface{}`, all responses are strongly typed  
-✅ **Comprehensive Coverage** - Support for all major public API endpoints  
-✅ **Bulk Operations** - Efficient fetching of multiple items at once  
-✅ **Pagination Support** - Built-in pagination with metadata  
-✅ **Localization** - Support for all 5 languages (EN, ES, DE, FR, ZH)  
-✅ **Context Support** - Timeout and cancellation support  
-✅ **Generic Architecture** - Leverages Go generics for clean, reusable code  
-✅ **Error Handling** - Proper error types and handling  
+- **Full Type Safety**: Complete Go type definitions for all API responses
+- **Multiple Interfaces**: CLI, Discord bot, and web server
+- **Bulk Operations**: Efficient batch requests for multiple items
+- **Pagination Support**: Handle large datasets with automatic pagination
+- **Error Handling**: Comprehensive error types and handling
+- **Language Support**: All supported GW2 API languages (EN, ES, DE, FR, ZH)
+- **Output Formats**: JSON, table, and YAML output for CLI
+- **Rate Limiting**: Automatic rate limiting and retry logic
 
-## Quick Start
+## Go Library Usage
 
 ```go
 package main
@@ -22,13 +92,15 @@ import (
     "context"
     "fmt"
     "time"
+    
+    "j5.nz/gw2/internal/gw2api"
 )
 
 func main() {
     // Create client with options
-    client := NewClient(
-        WithTimeout(10*time.Second),
-        WithLanguage(LanguageEnglish),
+    client := gw2api.NewClient(
+        gw2api.WithTimeout(10*time.Second),
+        gw2api.WithLanguage(gw2api.LanguageEnglish),
     )
     
     ctx := context.Background()
@@ -39,6 +111,29 @@ func main() {
         panic(err)
     }
     fmt.Printf("Current build: %d\n", build.ID)
+    
+    // Get achievement with full type safety
+    achievement, err := client.GetAchievement(ctx, 1)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("Achievement: %s (%d tiers)\n", achievement.Name, len(achievement.Tiers))
+    
+    // Get multiple items efficiently
+    items, err := client.GetItems(ctx, []int{100, 200, 300})
+    if err != nil {
+        panic(err)
+    }
+    for _, item := range items {
+        fmt.Printf("Item: %s (Level %d %s)\n", item.Name, item.Level, item.Rarity)
+    }
+}
+```
+
+## Documentation
+
+- **[SERVER_README.md](SERVER_README.md)** - Complete server and Discord bot setup guide
+- **[CLI_README.md](CLI_README.md)** - Original CLI documentation and examples
     
     // Get achievement with full type safety
     achievement, err := client.GetAchievement(ctx, 1)

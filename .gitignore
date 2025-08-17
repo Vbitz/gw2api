@@ -1,0 +1,27 @@
+# Binaries
+gw2api
+gw2api.exe
+cmd/cli/cli
+cmd/cli/cli.exe
+cmd/discord/discord-bot
+cmd/discord/discord-bot.exe
+cmd/web/web-server
+cmd/web/web-server.exe
+
+# Build artifacts
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
