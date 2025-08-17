@@ -1,6 +1,4 @@
 # Binaries
-gw2api
-gw2api.exe
 cmd/cli/cli
 cmd/cli/cli.exe
 cmd/discord/discord-bot
