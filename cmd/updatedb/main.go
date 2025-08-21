@@ -80,39 +80,39 @@ func updateSkillsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) er
 	return nil
 }
 
-// func updateRecipesDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-// 	recipeIds, err := client.GetRecipeIDs(context.Background())
-// 	if err != nil {
-// 		return err
-// 	}
+func updateRecipesDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
+	recipeIds, err := client.GetRecipeIDs(context.Background())
+	if err != nil {
+		return err
+	}
 
-// 	if len(recipeIds) > limit {
-// 		recipeIds = recipeIds[:limit]
-// 	}
+	if len(recipeIds) > limit {
+		recipeIds = recipeIds[:limit]
+	}
 
-// 	pb := progressbar.Default(int64(len(recipeIds)), "Fetching recipes")
-// 	defer pb.Finish()
+	pb := progressbar.Default(int64(len(recipeIds)), "Fetching recipes")
+	defer pb.Finish()
 
-// 	for i := 0; i < len(recipeIds); i += groupSize {
-// 		end := min(i+groupSize, len(recipeIds))
+	for i := 0; i < len(recipeIds); i += groupSize {
+		end := min(i+groupSize, len(recipeIds))
 
-// 		recipes, err := client.GetRecipes(context.Background(), recipeIds[i:end])
-// 		if err != nil {
-// 			return err
-// 		}
+		recipes, err := client.GetRecipes(context.Background(), recipeIds[i:end])
+		if err != nil {
+			return err
+		}
 
-// 		for _, recipe := range recipes {
-// 			if err := json.NewEncoder(f).Encode(recipe); err != nil {
-// 				return err
-// 			}
-// 			pb.Add(1)
-// 		}
+		for _, recipe := range recipes {
+			if err := json.NewEncoder(f).Encode(recipe); err != nil {
+				return err
+			}
+			pb.Add(1)
+		}
 
-// 		time.Sleep(2 * time.Second) // Rate limit to avoid hitting API too hard
-// 	}
+		time.Sleep(2 * time.Second) // Rate limit to avoid hitting API too hard
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func updateAchievementsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
 	achievementIds, err := client.GetAchievementIDs(context.Background())
@@ -180,16 +180,16 @@ func main() {
 		if err := updateSkillsDb(client, out, *limit, *groupSize); err != nil {
 			panic(err)
 		}
-	// case "recipes":
-	// 	out, err := os.Create("data/recipes.json")
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	defer out.Close()
+	case "recipes":
+		out, err := os.Create("data/recipes.json")
+		if err != nil {
+			panic(err)
+		}
+		defer out.Close()
 
-	// 	if err := updateRecipesDb(client, out, *limit, *groupSize); err != nil {
-	// 		panic(err)
-	// 	}
+		if err := updateRecipesDb(client, out, *limit, *groupSize); err != nil {
+			panic(err)
+		}
 	case "achievements":
 		out, err := os.Create("data/achievements.json")
 		if err != nil {

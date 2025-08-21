@@ -3,6 +3,7 @@ package gw2api
 // Achievement represents a Guild Wars 2 achievement
 type Achievement struct {
 	ID            int                 `json:"id"`
+	Icon          string              `json:"icon,omitempty"`
 	Name          string              `json:"name"`
 	Description   string              `json:"description"`
 	Requirement   string              `json:"requirement"`
@@ -54,4 +55,26 @@ type AchievementGroup struct {
 	Description string `json:"description"`
 	Order       int    `json:"order"`
 	Categories  []int  `json:"categories"`
+}
+
+// DailyAchievements represents today's daily achievements
+type DailyAchievements struct {
+	PvE      []DailyAchievement `json:"pve"`
+	PvP      []DailyAchievement `json:"pvp"`
+	WvW      []DailyAchievement `json:"wvw"`
+	Fractals []DailyAchievement `json:"fractals"`
+	Special  []DailyAchievement `json:"special"`
+}
+
+// DailyAchievement represents a single daily achievement
+type DailyAchievement struct {
+	ID             int                   `json:"id"`
+	Level          DailyAchievementLevel `json:"level"`
+	RequiredAccess []string              `json:"required_access,omitempty"`
+}
+
+// DailyAchievementLevel represents level requirements for daily achievements
+type DailyAchievementLevel struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
 }

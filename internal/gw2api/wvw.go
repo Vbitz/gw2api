@@ -261,3 +261,25 @@ type WvWUpgradeBonus struct {
 	Type        string `json:"type"`
 	Description string `json:"description"`
 }
+
+// WvWMatchStatsTeams represents detailed WvW match statistics by team
+type WvWMatchStatsTeams struct {
+	Red   WvWTeamStats `json:"red"`
+	Blue  WvWTeamStats `json:"blue"`
+	Green WvWTeamStats `json:"green"`
+}
+
+// WvWTeamStats represents statistics for a single team
+type WvWTeamStats struct {
+	Kills  int           `json:"kills"`
+	Deaths int           `json:"deaths"`
+	Maps   []WvWMapStats `json:"maps"`
+}
+
+// WvWMapStats represents statistics for a team on a specific map
+type WvWMapStats struct {
+	ID     int    `json:"id"`
+	Type   string `json:"type"`
+	Kills  int    `json:"kills"`
+	Deaths int    `json:"deaths"`
+}

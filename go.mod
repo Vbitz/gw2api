@@ -5,7 +5,6 @@ go 1.24.2
 require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/olekukonko/tablewriter v1.0.9
-	github.com/schollz/progressbar v1.0.0
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.9.1
 )

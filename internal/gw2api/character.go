@@ -42,14 +42,10 @@ type CharacterCore struct {
 	Level        int       `json:"level"`
 	Guild        string    `json:"guild,omitempty"`
 	Age          int       `json:"age"`
+	LastModified time.Time `json:"last_modified,omitempty"`
 	Created      time.Time `json:"created"`
 	Deaths       int       `json:"deaths"`
 	Title        int       `json:"title,omitempty"`
-	Crafting     []CharacterCrafting `json:"crafting"`
-	Backstory    []string  `json:"backstory"`
-	WvwAbilities []CharacterWvWAbility `json:"wvw_abilities"`
-	Flags        []string  `json:"flags"`
-	GuildTag     string    `json:"guild_tag,omitempty"`
 }
 
 // CharacterCrafting represents character crafting disciplines
@@ -79,17 +75,36 @@ type CharacterDungeonPath struct {
 
 // CharacterEquipment represents equipped items
 type CharacterEquipment struct {
-	ID         int              `json:"id"`
-	Slot       string           `json:"slot"`
-	Skin       int              `json:"skin,omitempty"`
-	Dyes       []int            `json:"dyes,omitempty"`
-	Upgrades   []int            `json:"upgrades,omitempty"`
-	Infusions  []int            `json:"infusions,omitempty"`
-	Binding    string           `json:"binding,omitempty"`
-	BoundTo    string           `json:"bound_to,omitempty"`
-	Stats      *ItemStat        `json:"stats,omitempty"`
-	Location   string           `json:"location,omitempty"`
-	Tabs       []int            `json:"tabs,omitempty"`
+	ID        int                      `json:"id"`
+	Slot      string                   `json:"slot,omitempty"`
+	Infusions []int                    `json:"infusions,omitempty"`
+	Upgrades  []int                    `json:"upgrades,omitempty"`
+	Skin      int                      `json:"skin,omitempty"`
+	Stats     *CharacterEquipmentStats `json:"stats,omitempty"`
+	Binding   string                   `json:"binding,omitempty"`
+	Location  string                   `json:"location,omitempty"`
+	Tabs      []int                    `json:"tabs,omitempty"`
+	Charges   int                      `json:"charges,omitempty"`
+	BoundTo   string                   `json:"bound_to,omitempty"`
+	Dyes      []*int                   `json:"dyes,omitempty"`
+}
+
+// CharacterEquipmentStats represents equipment stats
+type CharacterEquipmentStats struct {
+	ID         int                              `json:"id"`
+	Attributes CharacterEquipmentStatsAttributes `json:"attributes"`
+}
+
+// CharacterEquipmentStatsAttributes represents the stat attributes
+type CharacterEquipmentStatsAttributes struct {
+	Power              int `json:"Power,omitempty"`
+	Precision          int `json:"Precision,omitempty"`
+	Toughness          int `json:"Toughness,omitempty"`
+	Vitality           int `json:"Vitality,omitempty"`
+	ConditionDamage    int `json:"ConditionDamage,omitempty"`
+	ConditionDuration  int `json:"ConditionDuration,omitempty"`
+	Healing            int `json:"Healing,omitempty"`
+	BoonDuration       int `json:"BoonDuration,omitempty"`
 }
 
 // CharacterEquipmentTab represents an equipment tab

@@ -27,3 +27,9 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Documentation downloaded from official wiki
+wiki_docs/
+
+# Downloaded API data
+data/

@@ -265,3 +265,26 @@ type PvPStatsLadder struct {
 	Byes   int `json:"byes"`
 	Forfeits int `json:"forfeits"`
 }
+
+// PvPSeasonLeaderboardEntries represents the actual leaderboard data
+type PvPSeasonLeaderboardEntries struct {
+	Legendary []PvPLeaderboardEntry `json:"legendary"`
+	Guild     []PvPLeaderboardEntry `json:"guild"`
+}
+
+// PvPLeaderboardEntry represents a single leaderboard entry
+type PvPLeaderboardEntry struct {
+	Name        string                `json:"name,omitempty"`
+	ID          string                `json:"id,omitempty"`
+	Team        string                `json:"team,omitempty"`
+	TeamID      int                   `json:"team_id,omitempty"`
+	Rank        int                   `json:"rank"`
+	Date        string                `json:"date"`
+	Scores      []PvPLeaderboardScore `json:"scores"`
+}
+
+// PvPLeaderboardScore represents a score in a leaderboard entry
+type PvPLeaderboardScore struct {
+	ID    string `json:"id"`
+	Value int    `json:"value"`
+}

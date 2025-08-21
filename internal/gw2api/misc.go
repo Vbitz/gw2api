@@ -7,9 +7,13 @@ type Adventure struct {
 	Description string `json:"description"`
 }
 
-// AdventureLeaderboard represents adventure leaderboard
+// AdventureLeaderboard represents adventure leaderboard data
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/adventures
 type AdventureLeaderboard struct {
-	// Placeholder for adventure leaderboard data
+	Coord       []float64 `json:"coord"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
 }
 
 // BackstoryAnswer represents a backstory answer
@@ -32,9 +36,10 @@ type BackstoryQuestion struct {
 	Professions []string `json:"professions,omitempty"`
 }
 
-// CreateSubtoken represents create subtoken functionality
+// CreateSubtoken represents create subtoken request/response
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/createsubtoken
 type CreateSubtoken struct {
-	// Placeholder for subtoken creation
+	Subtoken string `json:"subtoken"`
 }
 
 // DailyCrafting represents daily crafting items
@@ -42,9 +47,11 @@ type DailyCraftingItem struct {
 	Item string `json:"item"`
 }
 
-// Emblem represents emblem information
+// Emblem represents guild emblem information
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/emblem
 type Emblem struct {
-	// Placeholder for emblem data
+	ID     int      `json:"id"`
+	Layers []string `json:"layers"`
 }
 
 // Emote represents an emote
@@ -87,19 +94,25 @@ type FileDetail struct {
 	Icon string `json:"icon"`
 }
 
-// GemstoreCatalog represents gemstore catalog
+// GemstoreCatalog represents gemstore catalog information
+// Note: This endpoint is not publicly documented
 type GemstoreCatalog struct {
-	// Placeholder for gemstore catalog data
+	// Structure would depend on actual API response when available
 }
 
 // HomeInfo represents home instance information
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/home
 type HomeInfo struct {
-	// Placeholder for home instance data
+	Cats  []string `json:"cats"`
+	Nodes []string `json:"nodes"`
 }
 
 // HomesteadInfo represents homestead information
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/homestead
 type HomesteadInfo struct {
-	// Placeholder for homestead data
+	Decorations           []string `json:"decorations"`
+	DecorationsCategories []string `json:"decorations/categories"`
+	Glyphs                []string `json:"glyphs"`
 }
 
 // HomesteadDecorationCategory represents decoration categories
@@ -129,9 +142,11 @@ type HomesteadGlyphDetail struct {
 	Icon        string `json:"icon"`
 }
 
-// LegendaryArmoryDetail represents legendary armory details
+// LegendaryArmoryDetail represents legendary armory item details
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/legendaryarmory
 type LegendaryArmoryDetail struct {
-	// Placeholder for legendary armory data
+	ID       int `json:"id"`
+	MaxCount int `json:"max_count"`
 }
 
 // Legend represents a revenant legend
@@ -143,9 +158,10 @@ type Legend struct {
 	Utilities []int `json:"utilities"`
 }
 
-// Logo represents a logo
+// LogoDetail represents logo information
+// Note: This endpoint is not publicly documented
 type LogoDetail struct {
-	// Placeholder for logo data
+	// Structure would depend on actual API response when available
 }
 
 // MapDetail represents detailed map information
@@ -166,8 +182,10 @@ type MapDetail struct {
 }
 
 // MountInfo represents mount information
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/mounts
 type MountInfo struct {
-	// Placeholder for mount data
+	Types []string `json:"types"`
+	Skins []string `json:"skins"`
 }
 
 // MountSkinDetail represents mount skin details
@@ -259,9 +277,12 @@ type RecipeIngredient struct {
 	Count  int `json:"count"`
 }
 
-// RecipeSearch represents recipe search functionality
+// RecipeSearch represents recipe search parameters and results
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/recipes/search
 type RecipeSearch struct {
-	// Placeholder for recipe search
+	Input  int   `json:"input,omitempty"`
+	Output int   `json:"output,omitempty"`
+	Type   string `json:"type,omitempty"`
 }
 
 // SkiffDetail represents skiff details
@@ -325,17 +346,34 @@ type VendorCost struct {
 	Quantity int `json:"quantity"`
 }
 
-// WizardsVaultListing represents wizard's vault listing
+// WizardsVaultListingDetail represents wizard's vault listing details
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/wizardsvault/listings
 type WizardsVaultListingDetail struct {
-	// Placeholder for wizard's vault listing data
+	ID        int    `json:"id"`
+	ItemID    int    `json:"item_id"`
+	ItemCount int    `json:"item_count"`
+	Type      string `json:"type"`
+	Cost      int    `json:"cost"`
 }
 
-// WizardsVaultObjective represents wizard's vault objective
+// WizardsVaultObjective represents wizard's vault objective details
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/wizardsvault/objectives
 type WizardsVaultObjective struct {
-	// Placeholder for wizard's vault objective data
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	Track       string `json:"track"`
+	Acclaim     int    `json:"acclaim"`
+	Progression *WizardsVaultProgression `json:"progression,omitempty"`
 }
 
-// WorldBossDetail represents world boss details
+// WizardsVaultProgression represents progression data for wizard's vault objectives
+type WizardsVaultProgression struct {
+	Current int `json:"current"`
+	Complete int `json:"complete"`
+}
+
+// WorldBossDetail represents world boss information
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/worldbosses
 type WorldBossDetail struct {
-	// Placeholder for world boss data
+	ID string `json:"id"`
 }

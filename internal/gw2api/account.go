@@ -2,23 +2,31 @@ package gw2api
 
 import "time"
 
-// Account represents basic account information
+// Account represents basic account information.
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/account
 type Account struct {
-	ID                string    `json:"id"`
-	Age               int       `json:"age"`
-	Name              string    `json:"name"`
-	World             int       `json:"world"`
-	Guilds            []string  `json:"guilds"`
-	GuildLeader       []string  `json:"guild_leader"`
-	Created           time.Time `json:"created"`
-	Access            []string  `json:"access"`
-	Commander         bool      `json:"commander"`
-	FractalLevel      int       `json:"fractal_level"`
-	DailyAP           int       `json:"daily_ap"`
-	MonthlyAP         int       `json:"monthly_ap"`
-	WvwRank           int       `json:"wvw_rank"`
-	LastModified      time.Time `json:"last_modified"`
-	BuildStorageSlots int       `json:"build_storage_slots"`
+	ID                string         `json:"id"`
+	Age               int            `json:"age"`
+	Name              string         `json:"name"`
+	World             int            `json:"world"`
+	Guilds            []string       `json:"guilds"`
+	GuildLeader       []string       `json:"guild_leader,omitempty"`
+	Created           time.Time      `json:"created"`
+	Access            []string       `json:"access"`
+	Commander         bool           `json:"commander"`
+	FractalLevel      int            `json:"fractal_level,omitempty"`
+	DailyAP           int            `json:"daily_ap,omitempty"`
+	MonthlyAP         int            `json:"monthly_ap,omitempty"`
+	WvwRank           int            `json:"wvw_rank,omitempty"`
+	WvW               *AccountWvW    `json:"wvw,omitempty"`
+	LastModified      time.Time      `json:"last_modified,omitempty"`
+	BuildStorageSlots int            `json:"build_storage_slots,omitempty"`
+}
+
+// AccountWvW represents WvW-specific account information
+type AccountWvW struct {
+	TeamID int `json:"team_id"`
+	Rank   int `json:"rank,omitempty"`
 }
 
 // AccountAchievement represents an account achievement
