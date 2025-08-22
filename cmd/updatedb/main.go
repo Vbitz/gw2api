@@ -6,7 +6,6 @@ import (
 	"flag"
 	"io"
 	"os"
-	"time"
 
 	"github.com/schollz/progressbar/v3"
 	"j5.nz/gw2/internal/gw2api"
@@ -45,8 +44,6 @@ func genericUpdate[T any](
 			}
 			pb.Add(1)
 		}
-
-		time.Sleep(200 * time.Millisecond)
 	}
 
 	return nil

@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -19,14 +22,24 @@ const (
 	DefaultLang = LanguageEnglish
 )
 
+// RetryConfig configures retry behavior for API requests
+type RetryConfig struct {
+	MaxRetries      int
+	BaseDelay       time.Duration
+	MaxDelay        time.Duration
+	BackoffMultiple float64
+}
+
 // Client provides access to the Guild Wars 2 API
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
-	apiKey     string
-	language   Language
-	userAgent  string
-	dataCache  *DataCache
+	baseURL     string
+	httpClient  *http.Client
+	apiKey      string
+	language    Language
+	userAgent   string
+	dataCache   *DataCache
+	rateLimiter *rate.Limiter
+	retryConfig *RetryConfig
 }
 
 // ClientOption configures a Client
@@ -60,6 +73,32 @@ func WithUserAgent(ua string) ClientOption {
 	}
 }
 
+// WithRateLimit sets a custom rate limit (requests per second)
+func WithRateLimit(requestsPerSecond float64) ClientOption {
+	return func(c *Client) {
+		c.rateLimiter = rate.NewLimiter(rate.Limit(requestsPerSecond), 1)
+	}
+}
+
+// WithRetryConfig sets custom retry configuration for handling server issues
+func WithRetryConfig(config *RetryConfig) ClientOption {
+	return func(c *Client) {
+		c.retryConfig = config
+	}
+}
+
+// WithRetries sets basic retry configuration with default exponential backoff
+func WithRetries(maxRetries int) ClientOption {
+	return func(c *Client) {
+		c.retryConfig = &RetryConfig{
+			MaxRetries:      maxRetries,
+			BaseDelay:       500 * time.Millisecond,
+			MaxDelay:        30 * time.Second,
+			BackoffMultiple: 2.0,
+		}
+	}
+}
+
 // WithDataCache enables comprehensive data caching and loads data from the specified directory
 func WithDataCache(dataDir string) ClientOption {
 	return func(c *Client) {
@@ -85,10 +124,17 @@ func WithItemCache(filePath string) ClientOption {
 // NewClient creates a new GW2 API client
 func NewClient(options ...ClientOption) *Client {
 	c := &Client{
-		baseURL:    BaseURL,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		language:   DefaultLang,
-		userAgent:  UserAgent,
+		baseURL:     BaseURL,
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		language:    DefaultLang,
+		userAgent:   UserAgent,
+		rateLimiter: rate.NewLimiter(5, 1), // Default: 5 requests per second
+		retryConfig: &RetryConfig{ // Default retry config for server downtime
+			MaxRetries:      3,
+			BaseDelay:       1 * time.Second,
+			MaxDelay:        30 * time.Second,
+			BackoffMultiple: 2.0,
+		},
 	}
 
 	for _, opt := range options {
@@ -96,6 +142,40 @@ func NewClient(options ...ClientOption) *Client {
 	}
 
 	return c
+}
+
+// HTTPError represents an HTTP error with status code
+type HTTPError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e HTTPError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
+}
+
+// isRetryableError determines if an error should trigger a retry
+func isRetryableError(err error) bool {
+	if httpErr, ok := err.(HTTPError); ok {
+		// Retry server errors (5xx) and rate limiting (429)
+		return httpErr.StatusCode >= 500 || httpErr.StatusCode == 429
+	}
+	
+	// Retry network errors, timeouts, etc.
+	return true
+}
+
+// calculateBackoffDelay calculates the delay for exponential backoff
+func (c *Client) calculateBackoffDelay(attempt int) time.Duration {
+	if c.retryConfig == nil {
+		return 0
+	}
+	
+	delay := time.Duration(float64(c.retryConfig.BaseDelay) * math.Pow(c.retryConfig.BackoffMultiple, float64(attempt)))
+	if delay > c.retryConfig.MaxDelay {
+		delay = c.retryConfig.MaxDelay
+	}
+	return delay
 }
 
 // RequestOptions configures individual API requests
@@ -155,6 +235,41 @@ func WithSchemaVersion(version string) RequestOption {
 
 // get performs a GET request to the API
 func (c *Client) get(ctx context.Context, endpoint string, opts *RequestOptions) ([]byte, *PaginationResponse, error) {
+	if c.retryConfig == nil || c.retryConfig.MaxRetries == 0 {
+		return c.makeRequest(ctx, endpoint, opts)
+	}
+
+	var lastErr error
+	
+	for attempt := 0; attempt <= c.retryConfig.MaxRetries; attempt++ {
+		if attempt > 0 {
+			delay := c.calculateBackoffDelay(attempt - 1)
+			select {
+			case <-ctx.Done():
+				return nil, nil, ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		body, pagination, err := c.makeRequest(ctx, endpoint, opts)
+		
+		// Success case
+		if err == nil {
+			return body, pagination, nil
+		}
+
+		lastErr = err
+		
+		// Check if error is retryable
+		if !isRetryableError(err) {
+			return nil, nil, err
+		}
+	}
+
+	return nil, nil, fmt.Errorf("request failed after %d retries: %w", c.retryConfig.MaxRetries, lastErr)
+}
+
+func (c *Client) makeRequest(ctx context.Context, endpoint string, opts *RequestOptions) ([]byte, *PaginationResponse, error) {
 	u, err := url.Parse(c.baseURL + endpoint)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid endpoint: %w", err)
@@ -211,6 +326,13 @@ func (c *Client) get(ctx context.Context, endpoint string, opts *RequestOptions)
 
 	req.Header.Set("User-Agent", c.userAgent)
 
+	// Apply rate limiting before making the request
+	if c.rateLimiter != nil {
+		if err := c.rateLimiter.Wait(ctx); err != nil {
+			return nil, nil, fmt.Errorf("rate limiting failed: %w", err)
+		}
+	}
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("request failed: %w", err)
@@ -222,12 +344,19 @@ func (c *Client) get(ctx context.Context, endpoint string, opts *RequestOptions)
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 		var apiErr APIError
 		if err := json.Unmarshal(body, &apiErr); err == nil && apiErr.Text != "" {
-			return nil, nil, apiErr
+			// For known API errors, wrap with status code for retry logic
+			return nil, nil, HTTPError{
+				StatusCode: resp.StatusCode,
+				Message:    apiErr.Text,
+			}
 		}
-		return nil, nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, nil, HTTPError{
+			StatusCode: resp.StatusCode,
+			Message:    string(body),
+		}
 	}
 
 	// Parse pagination headers if present
