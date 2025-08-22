@@ -21,11 +21,11 @@ type DataCache struct {
 
 // DataCacheStats tracks overall cache performance
 type DataCacheStats struct {
-	LoadTime       time.Duration
-	LastLoadTime   time.Time
-	TotalCacheHits int64
-	ItemsLoaded    int
-	SkillsLoaded   int
+	LoadTime           time.Duration
+	LastLoadTime       time.Time
+	TotalCacheHits     int64
+	ItemsLoaded        int
+	SkillsLoaded       int
 	AchievementsLoaded int
 }
 
@@ -111,12 +111,12 @@ func (dc *DataCache) GetAchievementCache() *AchievementCache {
 func (dc *DataCache) Stats() DataCacheStats {
 	dc.mutex.RLock()
 	defer dc.mutex.RUnlock()
-	
+
 	// Aggregate cache hits from all sub-caches
-	dc.stats.TotalCacheHits = dc.items.stats.CacheHits + 
-	                         dc.skills.stats.CacheHits + 
-	                         dc.achievements.stats.CacheHits
-	
+	dc.stats.TotalCacheHits = dc.items.stats.CacheHits +
+		dc.skills.stats.CacheHits +
+		dc.achievements.stats.CacheHits
+
 	return dc.stats
 }
 
@@ -124,7 +124,7 @@ func (dc *DataCache) Stats() DataCacheStats {
 func (dc *DataCache) Clear() {
 	dc.mutex.Lock()
 	defer dc.mutex.Unlock()
-	
+
 	dc.items.Clear()
 	dc.skills.Clear()
 	dc.achievements.Clear()
@@ -133,11 +133,11 @@ func (dc *DataCache) Clear() {
 
 // SkillCache provides in-memory caching of skills
 type SkillCache struct {
-	skills    map[int]*Skill // ID -> Skill mapping
-	skillsList []*Skill      // All skills as slice
-	loaded    bool
-	mutex     sync.RWMutex
-	stats     SkillCacheStats
+	skills     map[int]*Skill // ID -> Skill mapping
+	skillsList []*Skill       // All skills as slice
+	loaded     bool
+	mutex      sync.RWMutex
+	stats      SkillCacheStats
 }
 
 // SkillCacheStats tracks skill cache performance
@@ -164,7 +164,7 @@ func (sc *SkillCache) LoadFromFile(filePath string) error {
 	defer sc.mutex.Unlock()
 
 	startTime := time.Now()
-	
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open skills file %s: %w", filePath, err)
@@ -223,7 +223,7 @@ func (sc *SkillCache) GetByID(id int) (*Skill, bool) {
 	} else {
 		sc.stats.CacheMisses++
 	}
-	
+
 	return skill, found
 }
 
@@ -364,7 +364,7 @@ func (ac *AchievementCache) LoadFromFile(filePath string) error {
 	defer ac.mutex.Unlock()
 
 	startTime := time.Now()
-	
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open achievements file %s: %w", filePath, err)
@@ -423,7 +423,7 @@ func (ac *AchievementCache) GetByID(id int) (*Achievement, bool) {
 	} else {
 		ac.stats.CacheMisses++
 	}
-	
+
 	return achievement, found
 }
 
@@ -451,7 +451,7 @@ func (ac *AchievementCache) GetByIDs(ids []int) []*Achievement {
 }
 
 // SearchAchievements performs in-memory search on cached achievements
-func (ac *AchievementCache) SearchAchievements(query string, category string, limit int) []*Achievement {
+func (ac *AchievementCache) SearchAchievements(query string, limit int) []*Achievement {
 	ac.mutex.RLock()
 	defer ac.mutex.RUnlock()
 

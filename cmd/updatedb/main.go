@@ -40,7 +40,7 @@ func updateItemDb(client *gw2api.Client, f io.Writer, limit, groupSize int) erro
 			pb.Add(1)
 		}
 
-		time.Sleep(2 * time.Second) // Rate limit to avoid hitting API too hard
+		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
 	}
 
 	return nil
@@ -74,7 +74,7 @@ func updateSkillsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) er
 			pb.Add(1)
 		}
 
-		time.Sleep(2 * time.Second) // Rate limit to avoid hitting API too hard
+		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func updateRecipesDb(client *gw2api.Client, f io.Writer, limit, groupSize int) e
 			pb.Add(1)
 		}
 
-		time.Sleep(2 * time.Second) // Rate limit to avoid hitting API too hard
+		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
 	}
 
 	return nil
@@ -142,7 +142,75 @@ func updateAchievementsDb(client *gw2api.Client, f io.Writer, limit, groupSize i
 			pb.Add(1)
 		}
 
-		time.Sleep(2 * time.Second) // Rate limit to avoid hitting API too hard
+		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
+	}
+
+	return nil
+}
+
+func updateAchievementCategoryDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
+	categories, err := client.GetAchievementCategoryIDs(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if len(categories) > limit {
+		categories = categories[:limit]
+	}
+
+	pb := progressbar.Default(int64(len(categories)), "Fetching achievement categories")
+	defer pb.Finish()
+
+	for i := 0; i < len(categories); i += groupSize {
+		end := min(i+groupSize, len(categories))
+
+		cats, err := client.GetAchievementCategories(context.Background(), categories[i:end])
+		if err != nil {
+			return err
+		}
+
+		for _, cat := range cats {
+			if err := json.NewEncoder(f).Encode(cat); err != nil {
+				return err
+			}
+			pb.Add(1)
+		}
+
+		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
+	}
+
+	return nil
+}
+
+func updateSkinsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
+	skinIds, err := client.GetSkinIDs(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if len(skinIds) > limit {
+		skinIds = skinIds[:limit]
+	}
+
+	pb := progressbar.Default(int64(len(skinIds)), "Fetching skins")
+	defer pb.Finish()
+
+	for i := 0; i < len(skinIds); i += groupSize {
+		end := min(i+groupSize, len(skinIds))
+
+		skins, err := client.GetSkins(context.Background(), skinIds[i:end])
+		if err != nil {
+			return err
+		}
+
+		for _, skin := range skins {
+			if err := json.NewEncoder(f).Encode(skin); err != nil {
+				return err
+			}
+			pb.Add(1)
+		}
+
+		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
 	}
 
 	return nil
@@ -198,6 +266,26 @@ func main() {
 		defer out.Close()
 
 		if err := updateAchievementsDb(client, out, *limit, *groupSize); err != nil {
+			panic(err)
+		}
+	case "achievement-categories":
+		out, err := os.Create("data/achievement_categories.json")
+		if err != nil {
+			panic(err)
+		}
+		defer out.Close()
+
+		if err := updateAchievementCategoryDb(client, out, *limit, *groupSize); err != nil {
+			panic(err)
+		}
+	case "skins":
+		out, err := os.Create("data/skins.json")
+		if err != nil {
+			panic(err)
+		}
+		defer out.Close()
+
+		if err := updateSkinsDb(client, out, *limit, *groupSize); err != nil {
 			panic(err)
 		}
 	default:

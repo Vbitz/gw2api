@@ -33,3 +33,6 @@ wiki_docs/
 
 # Downloaded API data
 data/
+
+# Environment variables
+.env

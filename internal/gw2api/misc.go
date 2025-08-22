@@ -18,21 +18,21 @@ type AdventureLeaderboard struct {
 
 // BackstoryAnswer represents a backstory answer
 type BackstoryAnswer struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
 	Races       []string `json:"races,omitempty"`
 	Professions []string `json:"professions,omitempty"`
 }
 
 // BackstoryQuestion represents a backstory question
 type BackstoryQuestion struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Description string `json:"description"`
-	Answers []string `json:"answers"`
-	Order   int    `json:"order"`
-	Races   []string `json:"races,omitempty"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Answers     []string `json:"answers"`
+	Order       int      `json:"order"`
+	Races       []string `json:"races,omitempty"`
 	Professions []string `json:"professions,omitempty"`
 }
 
@@ -56,19 +56,19 @@ type Emblem struct {
 
 // Emote represents an emote
 type EmoteDetail struct {
-	ID           string   `json:"id"`
-	Commands     []string `json:"commands"`
-	UnlockItems  []int    `json:"unlock_items,omitempty"`
+	ID          string   `json:"id"`
+	Commands    []string `json:"commands"`
+	UnlockItems []int    `json:"unlock_items,omitempty"`
 }
 
 // Event represents a world event
 type Event struct {
-	ID    string            `json:"id"`
-	Name  string            `json:"name"`
-	Level int               `json:"level"`
-	MapID int               `json:"map_id"`
-	Flags []string          `json:"flags"`
-	Location EventLocation  `json:"location"`
+	ID       string        `json:"id"`
+	Name     string        `json:"name"`
+	Level    int           `json:"level"`
+	MapID    int           `json:"map_id"`
+	Flags    []string      `json:"flags"`
+	Location EventLocation `json:"location"`
 }
 
 // EventLocation represents event location
@@ -124,14 +124,14 @@ type HomesteadDecorationCategory struct {
 
 // HomesteadDecorationDetail represents decoration details
 type HomesteadDecorationDetail struct {
-	ID          int      `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Type        string   `json:"type"`
-	Categories  []int    `json:"categories"`
-	Icon        string   `json:"icon"`
-	Vendor      string   `json:"vendor,omitempty"`
-	CostItems   []int    `json:"cost_items,omitempty"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Categories  []int  `json:"categories"`
+	Icon        string `json:"icon"`
+	Vendor      string `json:"vendor,omitempty"`
+	CostItems   []int  `json:"cost_items,omitempty"`
 }
 
 // HomesteadGlyphDetail represents glyph details
@@ -151,11 +151,11 @@ type LegendaryArmoryDetail struct {
 
 // Legend represents a revenant legend
 type Legend struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Heal     int    `json:"heal"`
-	Elite    int    `json:"elite"`
-	Utilities []int `json:"utilities"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Heal      int    `json:"heal"`
+	Elite     int    `json:"elite"`
+	Utilities []int  `json:"utilities"`
 }
 
 // LogoDetail represents logo information
@@ -166,19 +166,19 @@ type LogoDetail struct {
 
 // MapDetail represents detailed map information
 type MapDetail struct {
-	ID            int              `json:"id"`
-	Name          string           `json:"name"`
-	MinLevel      int              `json:"min_level"`
-	MaxLevel      int              `json:"max_level"`
-	DefaultFloor  int              `json:"default_floor"`
-	Type          string           `json:"type"`
-	Floors        []int            `json:"floors"`
-	RegionID      int              `json:"region_id"`
-	RegionName    string           `json:"region_name"`
-	ContinentID   int              `json:"continent_id"`
-	ContinentName string           `json:"continent_name"`
-	MapRect       [][]int          `json:"map_rect"`
-	ContinentRect [][]int          `json:"continent_rect"`
+	ID            int     `json:"id"`
+	Name          string  `json:"name"`
+	MinLevel      int     `json:"min_level"`
+	MaxLevel      int     `json:"max_level"`
+	DefaultFloor  int     `json:"default_floor"`
+	Type          string  `json:"type"`
+	Floors        []int   `json:"floors"`
+	RegionID      int     `json:"region_id"`
+	RegionName    string  `json:"region_name"`
+	ContinentID   int     `json:"continent_id"`
+	ContinentName string  `json:"continent_name"`
+	MapRect       [][]int `json:"map_rect"`
+	ContinentRect [][]int `json:"continent_rect"`
 }
 
 // MountInfo represents mount information
@@ -190,10 +190,10 @@ type MountInfo struct {
 
 // MountSkinDetail represents mount skin details
 type MountSkinDetail struct {
-	ID     int      `json:"id"`
-	Name   string   `json:"name"`
-	Icon   string   `json:"icon"`
-	Mount  string   `json:"mount"`
+	ID       int            `json:"id"`
+	Name     string         `json:"name"`
+	Icon     string         `json:"icon"`
+	Mount    string         `json:"mount"`
 	DyeSlots []MountDyeSlot `json:"dye_slots"`
 }
 
@@ -205,11 +205,11 @@ type MountDyeSlot struct {
 
 // MountTypeDetail represents mount type details
 type MountTypeDetail struct {
-	ID       string           `json:"id"`
-	Name     string           `json:"name"`
-	DefaultSkin int           `json:"default_skin"`
-	Skins    []int            `json:"skins"`
-	Skills   []MountTypeSkill `json:"skills"`
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	DefaultSkin int              `json:"default_skin"`
+	Skins       []int            `json:"skins"`
+	Skills      []MountTypeSkill `json:"skills"`
 }
 
 // MountTypeSkill represents a mount type skill
@@ -229,19 +229,19 @@ type NoveltyDetail struct {
 
 // OutfitDetail represents outfit details
 type OutfitDetail struct {
-	ID          int      `json:"id"`
-	Name        string   `json:"name"`
-	Icon        string   `json:"icon"`
-	UnlockItems []int    `json:"unlock_items,omitempty"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Icon        string `json:"icon"`
+	UnlockItems []int  `json:"unlock_items,omitempty"`
 }
 
 // Pet represents a ranger pet
 type Pet struct {
-	ID     int    `json:"id"`
-	Name   string `json:"name"`
-	Description string `json:"description"`
-	Icon   string `json:"icon"`
-	Skills []PetSkill `json:"skills"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Icon        string     `json:"icon"`
+	Skills      []PetSkill `json:"skills"`
 }
 
 // PetSkill represents a pet skill
@@ -258,17 +258,17 @@ type Quaggan struct {
 
 // RecipeDetail represents recipe details
 type RecipeDetail struct {
-	ID            int              `json:"id"`
-	Type          string           `json:"type"`
-	OutputItemID  int              `json:"output_item_id"`
-	OutputItemCount int            `json:"output_item_count"`
-	TimeToCraftMS int              `json:"time_to_craft_ms"`
-	Disciplines   []string         `json:"disciplines"`
-	MinRating     int              `json:"min_rating"`
-	Flags         []string         `json:"flags"`
-	Ingredients   []RecipeIngredient `json:"ingredients"`
+	ID               int                `json:"id"`
+	Type             string             `json:"type"`
+	OutputItemID     int                `json:"output_item_id"`
+	OutputItemCount  int                `json:"output_item_count"`
+	TimeToCraftMS    int                `json:"time_to_craft_ms"`
+	Disciplines      []string           `json:"disciplines"`
+	MinRating        int                `json:"min_rating"`
+	Flags            []string           `json:"flags"`
+	Ingredients      []RecipeIngredient `json:"ingredients"`
 	GuildIngredients []RecipeIngredient `json:"guild_ingredients,omitempty"`
-	OutputUpgradeID int             `json:"output_upgrade_id,omitempty"`
+	OutputUpgradeID  int                `json:"output_upgrade_id,omitempty"`
 }
 
 // RecipeIngredient represents a recipe ingredient
@@ -280,8 +280,8 @@ type RecipeIngredient struct {
 // RecipeSearch represents recipe search parameters and results
 // Wiki: https://wiki.guildwars2.com/wiki/API:2/recipes/search
 type RecipeSearch struct {
-	Input  int   `json:"input,omitempty"`
-	Output int   `json:"output,omitempty"`
+	Input  int    `json:"input,omitempty"`
+	Output int    `json:"output,omitempty"`
 	Type   string `json:"type,omitempty"`
 }
 
@@ -294,23 +294,29 @@ type SkiffDetail struct {
 
 // SkinDetail represents skin details
 type SkinDetail struct {
-	ID           int             `json:"id"`
-	Name         string          `json:"name"`
-	Type         string          `json:"type"`
-	Flags        []string        `json:"flags"`
-	Restrictions []string        `json:"restrictions"`
-	Icon         string          `json:"icon"`
-	Rarity       string          `json:"rarity"`
-	Race         []string        `json:"race,omitempty"`
-	Description  string          `json:"description,omitempty"`
-	Details      SkinDetailInfo  `json:"details,omitempty"`
+	ID           int            `json:"id"`
+	Name         string         `json:"name"`
+	Type         string         `json:"type"`
+	Flags        []string       `json:"flags"`
+	Restrictions []string       `json:"restrictions"`
+	Icon         string         `json:"icon"`
+	Rarity       string         `json:"rarity"`
+	Race         []string       `json:"race,omitempty"`
+	Description  string         `json:"description,omitempty"`
+	Details      SkinDetailInfo `json:"details,omitempty"`
 }
 
 // SkinDetailInfo represents detailed skin information
 type SkinDetailInfo struct {
-	Type        string `json:"type,omitempty"`
-	WeightClass string `json:"weight_class,omitempty"`
-	DyeSlots    []SkinDyeSlot `json:"dye_slots,omitempty"`
+	Type        string       `json:"type,omitempty"`
+	WeightClass string       `json:"weight_class,omitempty"`
+	DyeSlots    SkinDyeSlots `json:"dye_slots,omitempty"`
+}
+
+// SkinDyeSlots represents dye slots for a skin
+type SkinDyeSlots struct {
+	Default   []SkinDyeSlot `json:"default,omitempty"`
+	Overrides any           `json:"overrides,omitempty"`
 }
 
 // SkinDyeSlot represents a skin dye slot
@@ -328,15 +334,15 @@ type TokenInfo struct {
 
 // Vendor represents a vendor
 type Vendor struct {
-	ID       int    `json:"id"`
-	Type     string `json:"type"`
-	Sells    []VendorItem `json:"sells"`
-	Buys     []VendorItem `json:"buys"`
+	ID    int          `json:"id"`
+	Type  string       `json:"type"`
+	Sells []VendorItem `json:"sells"`
+	Buys  []VendorItem `json:"buys"`
 }
 
 // VendorItem represents an item sold by a vendor
 type VendorItem struct {
-	ItemID int         `json:"item_id"`
+	ItemID int          `json:"item_id"`
 	Cost   []VendorCost `json:"cost"`
 }
 
@@ -359,16 +365,16 @@ type WizardsVaultListingDetail struct {
 // WizardsVaultObjective represents wizard's vault objective details
 // Wiki: https://wiki.guildwars2.com/wiki/API:2/wizardsvault/objectives
 type WizardsVaultObjective struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Track       string `json:"track"`
-	Acclaim     int    `json:"acclaim"`
+	ID          int                      `json:"id"`
+	Title       string                   `json:"title"`
+	Track       string                   `json:"track"`
+	Acclaim     int                      `json:"acclaim"`
 	Progression *WizardsVaultProgression `json:"progression,omitempty"`
 }
 
 // WizardsVaultProgression represents progression data for wizard's vault objectives
 type WizardsVaultProgression struct {
-	Current int `json:"current"`
+	Current  int `json:"current"`
 	Complete int `json:"complete"`
 }
 

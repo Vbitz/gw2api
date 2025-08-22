@@ -430,10 +430,10 @@ func (c *Client) GetBackstoryAnswers(ctx context.Context, ids []string, options 
 	if len(ids) == 0 {
 		return nil, fmt.Errorf("no IDs provided")
 	}
-	
+
 	idsStr := strings.Join(ids, ",")
 	endpoint := "/v2/backstory/answers?ids=" + idsStr
-	
+
 	results, err := GetAll[BackstoryAnswer](ctx, c, endpoint, options...)
 	if err != nil {
 		return nil, err
@@ -453,10 +453,10 @@ func (c *Client) GetBackstoryQuestions(ctx context.Context, ids []string, option
 	if len(ids) == 0 {
 		return nil, fmt.Errorf("no IDs provided")
 	}
-	
+
 	idsStr := strings.Join(ids, ",")
 	endpoint := "/v2/backstory/questions?ids=" + idsStr
-	
+
 	results, err := GetAll[BackstoryQuestion](ctx, c, endpoint, options...)
 	if err != nil {
 		return nil, err
@@ -487,6 +487,61 @@ func (c *Client) GetAchievement(ctx context.Context, id int, options ...RequestO
 // Wiki: https://wiki.guildwars2.com/wiki/API:2/achievements
 // Scopes: None (public endpoint)
 func (c *Client) GetAchievements(ctx context.Context, ids []int, options ...RequestOption) ([]*Achievement, error) {
+	// Try cache first if available
+	if c.dataCache != nil && c.dataCache.GetAchievementCache().IsLoaded() {
+		cachedAchievements := c.dataCache.GetAchievementCache().GetByIDs(ids)
+		if len(cachedAchievements) == len(ids) {
+			// All achievements found in cache
+			return cachedAchievements, nil
+		}
+
+		// Some achievements found in cache, determine which ones to fetch from API
+		cachedMap := make(map[int]*Achievement)
+		for _, achievement := range cachedAchievements {
+			cachedMap[achievement.ID] = achievement
+		}
+
+		// Find missing IDs
+		var missingIDs []int
+		for _, id := range ids {
+			if _, found := cachedMap[id]; !found {
+				missingIDs = append(missingIDs, id)
+			}
+		}
+
+		if len(missingIDs) == 0 {
+			// All achievements were in cache
+			result := make([]*Achievement, len(ids))
+			for i, id := range ids {
+				result[i] = cachedMap[id]
+			}
+			return result, nil
+		}
+
+		// Fetch missing achievements from API
+		apiResults, err := GetByIDs[Achievement](ctx, c, "/v2/achievements", missingIDs, options...)
+		if err != nil {
+			// Return cached achievements even if API fails
+			return cachedAchievements, nil
+		}
+
+		// Combine cached and API results
+		for i := range apiResults {
+			cachedMap[apiResults[i].ID] = &apiResults[i]
+		}
+
+		// Build result in original order
+		result := make([]*Achievement, len(ids))
+		for i, id := range ids {
+			if achievement, found := cachedMap[id]; found {
+				result[i] = achievement
+			}
+		}
+
+		return result, nil
+	}
+
+	// No cache available, fetch directly from API
 	results, err := GetByIDs[Achievement](ctx, c, "/v2/achievements", ids, options...)
 	if err != nil {
 		return nil, err
@@ -1074,8 +1129,8 @@ func (c *Client) GetAccountSkiffs(ctx context.Context, options ...RequestOption)
 // GetAccountSkins returns unlocked skins.
 // Wiki: https://wiki.guildwars2.com/wiki/API:2/account/skins
 // Scopes: account, unlocks
-func (c *Client) GetAccountSkins(ctx context.Context, options ...RequestOption) ([]Skin, error) {
-	return GetAll[Skin](ctx, c, "/v2/account/skins", options...)
+func (c *Client) GetAccountSkins(ctx context.Context, options ...RequestOption) ([]int, error) {
+	return GetIDs[int](ctx, c, "/v2/account/skins", options...)
 }
 
 // GetAccountTitles returns unlocked titles.
@@ -1841,6 +1896,22 @@ func (c *Client) GetSkiff(ctx context.Context, id int, options ...RequestOption)
 // Scopes: None (public endpoint)
 func (c *Client) GetSkinIDs(ctx context.Context, options ...RequestOption) ([]int, error) {
 	return GetIDs[int](ctx, c, "/v2/skins", options...)
+}
+
+// GetSkins returns multiple skins by IDs.
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/skins
+// Scopes: None (public endpoint)
+func (c *Client) GetSkins(ctx context.Context, ids []int, options ...RequestOption) ([]*SkinDetail, error) {
+	results, err := GetByIDs[SkinDetail](ctx, c, "/v2/skins", ids, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	ptrs := make([]*SkinDetail, len(results))
+	for i := range results {
+		ptrs[i] = &results[i]
+	}
+	return ptrs, nil
 }
 
 // GetSkin returns a specific skin by ID.
