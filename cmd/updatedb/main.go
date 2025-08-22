@@ -12,205 +12,41 @@ import (
 	"j5.nz/gw2/internal/gw2api"
 )
 
-func updateItemDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-	itemIds, err := client.GetItemIDs(context.Background())
+func genericUpdate[T any](
+	f io.Writer,
+	limit, groupSize int,
+	getIDs func(context.Context) ([]int, error),
+	getData func(context.Context, []int) ([]T, error),
+	label string,
+) error {
+	ids, err := getIDs(context.Background())
 	if err != nil {
 		return err
 	}
 
-	if len(itemIds) > limit {
-		itemIds = itemIds[:limit]
+	if len(ids) > limit {
+		ids = ids[:limit]
 	}
 
-	pb := progressbar.Default(int64(len(itemIds)), "Fetching items")
+	pb := progressbar.Default(int64(len(ids)), label)
 	defer pb.Finish()
 
-	for i := 0; i < len(itemIds); i += groupSize {
-		end := min(i+groupSize, len(itemIds))
+	for i := 0; i < len(ids); i += groupSize {
+		end := min(i+groupSize, len(ids))
 
-		items, err := client.GetItems(context.Background(), itemIds[i:end])
+		data, err := getData(context.Background(), ids[i:end])
 		if err != nil {
 			return err
 		}
 
-		for _, item := range items {
+		for _, item := range data {
 			if err := json.NewEncoder(f).Encode(item); err != nil {
 				return err
 			}
 			pb.Add(1)
 		}
 
-		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
-	}
-
-	return nil
-}
-
-func updateSkillsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-	skillIds, err := client.GetSkillIDs(context.Background())
-	if err != nil {
-		return err
-	}
-
-	if len(skillIds) > limit {
-		skillIds = skillIds[:limit]
-	}
-
-	pb := progressbar.Default(int64(len(skillIds)), "Fetching skills")
-	defer pb.Finish()
-
-	for i := 0; i < len(skillIds); i += groupSize {
-		end := min(i+groupSize, len(skillIds))
-
-		skills, err := client.GetSkills(context.Background(), skillIds[i:end])
-		if err != nil {
-			return err
-		}
-
-		for _, skill := range skills {
-			if err := json.NewEncoder(f).Encode(skill); err != nil {
-				return err
-			}
-			pb.Add(1)
-		}
-
-		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
-	}
-
-	return nil
-}
-
-func updateRecipesDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-	recipeIds, err := client.GetRecipeIDs(context.Background())
-	if err != nil {
-		return err
-	}
-
-	if len(recipeIds) > limit {
-		recipeIds = recipeIds[:limit]
-	}
-
-	pb := progressbar.Default(int64(len(recipeIds)), "Fetching recipes")
-	defer pb.Finish()
-
-	for i := 0; i < len(recipeIds); i += groupSize {
-		end := min(i+groupSize, len(recipeIds))
-
-		recipes, err := client.GetRecipes(context.Background(), recipeIds[i:end])
-		if err != nil {
-			return err
-		}
-
-		for _, recipe := range recipes {
-			if err := json.NewEncoder(f).Encode(recipe); err != nil {
-				return err
-			}
-			pb.Add(1)
-		}
-
-		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
-	}
-
-	return nil
-}
-
-func updateAchievementsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-	achievementIds, err := client.GetAchievementIDs(context.Background())
-	if err != nil {
-		return err
-	}
-
-	if len(achievementIds) > limit {
-		achievementIds = achievementIds[:limit]
-	}
-
-	pb := progressbar.Default(int64(len(achievementIds)), "Fetching achievements")
-	defer pb.Finish()
-
-	for i := 0; i < len(achievementIds); i += groupSize {
-		end := min(i+groupSize, len(achievementIds))
-
-		achievements, err := client.GetAchievements(context.Background(), achievementIds[i:end])
-		if err != nil {
-			return err
-		}
-
-		for _, achievement := range achievements {
-			if err := json.NewEncoder(f).Encode(achievement); err != nil {
-				return err
-			}
-			pb.Add(1)
-		}
-
-		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
-	}
-
-	return nil
-}
-
-func updateAchievementCategoryDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-	categories, err := client.GetAchievementCategoryIDs(context.Background())
-	if err != nil {
-		return err
-	}
-
-	if len(categories) > limit {
-		categories = categories[:limit]
-	}
-
-	pb := progressbar.Default(int64(len(categories)), "Fetching achievement categories")
-	defer pb.Finish()
-
-	for i := 0; i < len(categories); i += groupSize {
-		end := min(i+groupSize, len(categories))
-
-		cats, err := client.GetAchievementCategories(context.Background(), categories[i:end])
-		if err != nil {
-			return err
-		}
-
-		for _, cat := range cats {
-			if err := json.NewEncoder(f).Encode(cat); err != nil {
-				return err
-			}
-			pb.Add(1)
-		}
-
-		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
-	}
-
-	return nil
-}
-
-func updateSkinsDb(client *gw2api.Client, f io.Writer, limit, groupSize int) error {
-	skinIds, err := client.GetSkinIDs(context.Background())
-	if err != nil {
-		return err
-	}
-
-	if len(skinIds) > limit {
-		skinIds = skinIds[:limit]
-	}
-
-	pb := progressbar.Default(int64(len(skinIds)), "Fetching skins")
-	defer pb.Finish()
-
-	for i := 0; i < len(skinIds); i += groupSize {
-		end := min(i+groupSize, len(skinIds))
-
-		skins, err := client.GetSkins(context.Background(), skinIds[i:end])
-		if err != nil {
-			return err
-		}
-
-		for _, skin := range skins {
-			if err := json.NewEncoder(f).Encode(skin); err != nil {
-				return err
-			}
-			pb.Add(1)
-		}
-
-		time.Sleep(200 * time.Millisecond) // Rate limit to avoid hitting API too hard
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	return nil
@@ -235,7 +71,10 @@ func main() {
 		}
 		defer out.Close()
 
-		if err := updateItemDb(client, out, *limit, *groupSize); err != nil {
+		if err := genericUpdate(out, *limit, *groupSize,
+			func(ctx context.Context) ([]int, error) { return client.GetItemIDs(ctx) },
+			func(ctx context.Context, ids []int) ([]*gw2api.Item, error) { return client.GetItems(ctx, ids) },
+			"Fetching items"); err != nil {
 			panic(err)
 		}
 	case "skills":
@@ -245,7 +84,10 @@ func main() {
 		}
 		defer out.Close()
 
-		if err := updateSkillsDb(client, out, *limit, *groupSize); err != nil {
+		if err := genericUpdate(out, *limit, *groupSize,
+			func(ctx context.Context) ([]int, error) { return client.GetSkillIDs(ctx) },
+			func(ctx context.Context, ids []int) ([]*gw2api.Skill, error) { return client.GetSkills(ctx, ids) },
+			"Fetching skills"); err != nil {
 			panic(err)
 		}
 	case "recipes":
@@ -255,7 +97,12 @@ func main() {
 		}
 		defer out.Close()
 
-		if err := updateRecipesDb(client, out, *limit, *groupSize); err != nil {
+		if err := genericUpdate(out, *limit, *groupSize,
+			func(ctx context.Context) ([]int, error) { return client.GetRecipeIDs(ctx) },
+			func(ctx context.Context, ids []int) ([]*gw2api.RecipeDetail, error) {
+				return client.GetRecipes(ctx, ids)
+			},
+			"Fetching recipes"); err != nil {
 			panic(err)
 		}
 	case "achievements":
@@ -265,7 +112,12 @@ func main() {
 		}
 		defer out.Close()
 
-		if err := updateAchievementsDb(client, out, *limit, *groupSize); err != nil {
+		if err := genericUpdate(out, *limit, *groupSize,
+			func(ctx context.Context) ([]int, error) { return client.GetAchievementIDs(ctx) },
+			func(ctx context.Context, ids []int) ([]*gw2api.Achievement, error) {
+				return client.GetAchievements(ctx, ids)
+			},
+			"Fetching achievements"); err != nil {
 			panic(err)
 		}
 	case "achievement-categories":
@@ -275,7 +127,12 @@ func main() {
 		}
 		defer out.Close()
 
-		if err := updateAchievementCategoryDb(client, out, *limit, *groupSize); err != nil {
+		if err := genericUpdate(out, *limit, *groupSize,
+			func(ctx context.Context) ([]int, error) { return client.GetAchievementCategoryIDs(ctx) },
+			func(ctx context.Context, ids []int) ([]*gw2api.AchievementCategory, error) {
+				return client.GetAchievementCategories(ctx, ids)
+			},
+			"Fetching achievement categories"); err != nil {
 			panic(err)
 		}
 	case "skins":
@@ -285,7 +142,10 @@ func main() {
 		}
 		defer out.Close()
 
-		if err := updateSkinsDb(client, out, *limit, *groupSize); err != nil {
+		if err := genericUpdate(out, *limit, *groupSize,
+			func(ctx context.Context) ([]int, error) { return client.GetSkinIDs(ctx) },
+			func(ctx context.Context, ids []int) ([]*gw2api.SkinDetail, error) { return client.GetSkins(ctx, ids) },
+			"Fetching skins"); err != nil {
 			panic(err)
 		}
 	default:
