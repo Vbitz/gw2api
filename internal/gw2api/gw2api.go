@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -40,6 +41,7 @@ type Client struct {
 	dataCache   *DataCache
 	rateLimiter *rate.Limiter
 	retryConfig *RetryConfig
+	verbose     bool
 }
 
 // ClientOption configures a Client
@@ -70,6 +72,13 @@ func WithTimeout(timeout time.Duration) ClientOption {
 func WithUserAgent(ua string) ClientOption {
 	return func(c *Client) {
 		c.userAgent = ua
+	}
+}
+
+// WithVerboseLogging enables verbose request/response logging
+func WithVerboseLogging() ClientOption {
+	return func(c *Client) {
+		c.verbose = true
 	}
 }
 
@@ -119,6 +128,11 @@ func WithItemCache(filePath string) ClientOption {
 			fmt.Printf("Warning: Failed to load item cache from %s: %v\n", filePath, err)
 		}
 	}
+}
+
+// DataCache returns the client's data cache (if available)
+func (c *Client) DataCache() *DataCache {
+	return c.dataCache
 }
 
 // NewClient creates a new GW2 API client
@@ -326,6 +340,11 @@ func (c *Client) makeRequest(ctx context.Context, endpoint string, opts *Request
 
 	req.Header.Set("User-Agent", c.userAgent)
 
+	// Verbose logging
+	if c.verbose {
+		log.Printf("[API] GET %s", u.String())
+	}
+
 	// Apply rate limiting before making the request
 	if c.rateLimiter != nil {
 		if err := c.rateLimiter.Wait(ctx); err != nil {
@@ -342,6 +361,11 @@ func (c *Client) makeRequest(ctx context.Context, endpoint string, opts *Request
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// Verbose response logging
+	if c.verbose {
+		log.Printf("[API] Response %d: %d bytes", resp.StatusCode, len(body))
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
@@ -1987,6 +2011,61 @@ func (c *Client) GetRecipeIDs(ctx context.Context, options ...RequestOption) ([]
 // Wiki: https://wiki.guildwars2.com/wiki/API:2/recipes
 // Scopes: None (public endpoint)
 func (c *Client) GetRecipes(ctx context.Context, ids []int, options ...RequestOption) ([]*RecipeDetail, error) {
+	// Try cache first if available
+	if c.dataCache != nil && c.dataCache.GetRecipeCache().IsLoaded() {
+		cachedRecipes := c.dataCache.GetRecipeCache().GetByIDs(ids)
+		if len(cachedRecipes) == len(ids) {
+			// All recipes found in cache
+			return cachedRecipes, nil
+		}
+
+		// Some recipes found in cache, determine which ones to fetch from API
+		cachedMap := make(map[int]*RecipeDetail)
+		for _, recipe := range cachedRecipes {
+			cachedMap[recipe.ID] = recipe
+		}
+
+		// Find missing IDs
+		var missingIDs []int
+		for _, id := range ids {
+			if _, found := cachedMap[id]; !found {
+				missingIDs = append(missingIDs, id)
+			}
+		}
+
+		if len(missingIDs) == 0 {
+			// All recipes were in cache
+			result := make([]*RecipeDetail, len(ids))
+			for i, id := range ids {
+				result[i] = cachedMap[id]
+			}
+			return result, nil
+		}
+
+		// Fetch missing recipes from API
+		apiResults, err := GetByIDs[RecipeDetail](ctx, c, "/v2/recipes", missingIDs, options...)
+		if err != nil {
+			// Return cached recipes even if API fails
+			return cachedRecipes, nil
+		}
+
+		// Combine cached and API results
+		for i := range apiResults {
+			cachedMap[apiResults[i].ID] = &apiResults[i]
+		}
+
+		// Build result in original order
+		result := make([]*RecipeDetail, len(ids))
+		for i, id := range ids {
+			if recipe, found := cachedMap[id]; found {
+				result[i] = recipe
+			}
+		}
+
+		return result, nil
+	}
+
+	// Fallback to API only
 	results, err := GetByIDs[RecipeDetail](ctx, c, "/v2/recipes", ids, options...)
 	if err != nil {
 		return nil, err
@@ -2180,7 +2259,30 @@ func (c *Client) GetWorldBosses(ctx context.Context, options ...RequestOption) (
 // Character Endpoints
 // ========================
 
-// GetCharacters returns all character names.
+// GetCharacterNames returns all character names.
+// Wiki: https://wiki.guildwars2.com/wiki/API:2/characters
+// Scopes: characters
+func (c *Client) GetCharacterNames(ctx context.Context, options ...RequestOption) ([]string, error) {
+	// Custom implementation that doesn't add ids=all
+	opts := &RequestOptions{}
+	for _, opt := range options {
+		opt(opts)
+	}
+
+	data, _, err := c.get(ctx, "/v2/characters", opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []string
+	if err := json.Unmarshal(data, &results); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return results, nil
+}
+
+// GetCharacters returns all character details.
 // Wiki: https://wiki.guildwars2.com/wiki/API:2/characters
 // Scopes: characters
 func (c *Client) GetCharacters(ctx context.Context, options ...RequestOption) ([]Character, error) {

@@ -3,128 +3,99 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
-	"j5.nz/gw2/internal/discord"
+	"github.com/joho/godotenv"
+	"j5.nz/gw2/internal/cache"
 	"j5.nz/gw2/internal/gw2api"
 	"j5.nz/gw2/internal/web"
 )
 
 func main() {
-	var (
-		discordToken = flag.String("discord-token", "", "Discord bot token")
-		port         = flag.String("port", "8080", "Web server port")
-		webOnly      = flag.Bool("web-only", false, "Run only the web server (no Discord bot)")
-		discordOnly  = flag.Bool("discord-only", false, "Run only the Discord bot (no web server)")
-	)
+	// Load .env file if it exists
+	if err := godotenv.Load(); err != nil {
+		// .env file is optional, don't fail if it doesn't exist
+		log.Printf("Note: .env file not found or could not be loaded: %v", err)
+	}
+
+	// Parse command line flags
+	verbose := flag.Bool("verbose", false, "Enable verbose API request logging")
+	addr := flag.String("addr", ":9090", "HTTP server address")
 	flag.Parse()
 
-	// Create GW2 API client with cache if available
+	// Get API key from environment
+	apiKey := os.Getenv("GW2_API_KEY")
+	if apiKey == "" {
+		log.Println("Warning: GW2_API_KEY not set in environment or .env file")
+		log.Println("Some features requiring authentication will not work")
+	}
+
+	// Create GW2 API client with optional verbose logging
 	var clientOptions []gw2api.ClientOption
-	clientOptions = append(clientOptions, 
-		gw2api.WithTimeout(30*time.Second),
-		gw2api.WithUserAgent("gw2api-server/1.0"),
-	)
-	
-	// Enable comprehensive data cache if data directory exists
-	if _, err := os.Stat("data"); err == nil {
-		clientOptions = append(clientOptions, gw2api.WithDataCache("data"))
-		log.Println("Data cache enabled from data/ directory")
+	clientOptions = append(clientOptions, gw2api.WithDataCache("data"))
+
+	if apiKey != "" {
+		clientOptions = append(clientOptions, gw2api.WithAPIKey(apiKey))
+		log.Println("API key loaded from environment")
 	}
-	
-	gw2Client := gw2api.NewClient(clientOptions...)
 
-	// Channel to handle shutdown signals
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	if *verbose {
+		clientOptions = append(clientOptions, gw2api.WithVerboseLogging())
+		log.Println("Verbose API logging enabled")
+	}
 
-	// Start Discord bot if requested and token is provided
-	var bot *discord.Bot
-	if !*webOnly {
-		if *discordToken == "" {
-			if *discordOnly {
-				log.Fatal("Discord token is required when running in discord-only mode")
-			}
-			log.Println("Warning: No Discord token provided, Discord bot will not start")
-		} else {
-			var err error
-			bot, err = discord.NewBot(*discordToken, gw2Client)
-			if err != nil {
-				log.Fatalf("Failed to create Discord bot: %v", err)
-			}
+	client := gw2api.NewClient(clientOptions...)
 
-			err = bot.Start()
-			if err != nil {
-				log.Fatalf("Failed to start Discord bot: %v", err)
-			}
-			log.Println("Discord bot started successfully")
+	// Create cache for trading post prices (3 hour TTL)
+	priceCache := cache.NewLRUCache(10000)
+
+	// Create web server
+	server := web.NewServer(client, priceCache)
+
+	// Setup HTTP server
+	srv := &http.Server{
+		Addr:    *addr,
+		Handler: server,
+
+		// Good practice timeouts
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		l, err := net.Listen("tcp", *addr)
+		if err != nil {
+			log.Fatalf("Failed to listen on %s: %v", *addr, err)
 		}
-	}
+		defer l.Close()
 
-	// Start web server if requested
-	var server *http.Server
-	if !*discordOnly {
-		webServer := web.NewEnhancedServer(gw2Client)
-		mux := webServer.SetupRoutes()
-
-		server = &http.Server{
-			Addr:    ":" + *port,
-			Handler: mux,
+		fmt.Printf("Starting server on http://%s\n", l.Addr().String())
+		if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
 		}
+	}()
 
-		go func() {
-			log.Printf("Web server starting on port %s", *port)
-			log.Printf("Visit http://localhost:%s for the web interface", *port)
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("Failed to start web server: %v", err)
-			}
-		}()
-	}
+	// Wait for interrupt signal to gracefully shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
 
-	// If running both services, show status
-	if !*webOnly && !*discordOnly {
-		if *discordToken != "" {
-			log.Println("Running both Discord bot and web server")
-			log.Printf("Discord bot: Active with slash commands")
-			log.Printf("Web server: http://localhost:%s", *port)
-		} else {
-			log.Printf("Running web server only (no Discord token provided)")
-			log.Printf("Web server: http://localhost:%s", *port)
-		}
-	}
+	fmt.Println("Shutting down server...")
 
-	// Wait for shutdown signal
-	<-stop
-	log.Println("Shutting down...")
-
-	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Stop Discord bot
-	if bot != nil {
-		log.Println("Stopping Discord bot...")
-		if err := bot.Stop(); err != nil {
-			log.Printf("Error stopping Discord bot: %v", err)
-		} else {
-			log.Println("Discord bot stopped")
-		}
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
 	}
 
-	// Stop web server
-	if server != nil {
-		log.Println("Stopping web server...")
-		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("Error stopping web server: %v", err)
-		} else {
-			log.Println("Web server stopped")
-		}
-	}
-
-	log.Println("Shutdown complete")
+	fmt.Println("Server exited")
 }

@@ -1,0 +1,107 @@
+<!-- Children Expansion Template -->
+<div id="sub-ingredients-{{.ParentRecipeID}}-{{.ParentItemID}}" class="ml-8 space-y-2">
+    {{range .Children}}
+    <div class="flex items-center justify-between p-3 {{if .HasRecipe}}{{if .CanCraft}}bg-green-50 border-green-300{{else}}bg-yellow-50 border-yellow-300{{end}}{{else}}bg-gray-50 border-gray-300{{end}} rounded-lg border-l-4 mb-2">
+        <div class="flex items-center space-x-3 flex-1">
+            {{if .Item.Icon}}
+            <img src="{{.Item.Icon}}" alt="{{.Item.Name}}" class="w-8 h-8 rounded">
+            {{else}}
+            <div class="w-8 h-8 bg-gray-200 rounded"></div>
+            {{end}}
+            
+            <div class="flex-1">
+                <div class="flex items-center space-x-2">
+                    <a href="/items/{{.Item.ID}}" class="font-medium text-base text-gray-900 rarity-{{.Item.Rarity | lower}} hover:underline">{{.Item.Name}}</a>
+                    <span class="text-sm text-gray-500">×{{.RequiredCount}}</span>
+                    
+                    {{if .HasRecipe}}
+                        {{if .CanCraft}}
+                        <span class="inline-flex px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            <a href="/crafting/{{.Recipe.ID}}" class="hover:underline">Craft (Cheaper)</a>
+                        </span>
+                        {{if gt .BuyPrice 0}}
+                        <span class="inline-flex px-1 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                            Buy Available
+                        </span>
+                        {{end}}
+                        {{else}}
+                        <span class="inline-flex px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                            <a href="/crafting/{{.Recipe.ID}}" class="hover:underline">Craft Available</a>
+                        </span>
+                        {{if gt .BuyPrice 0}}
+                        <span class="inline-flex px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Buy (Cheaper)
+                        </span>
+                        {{end}}
+                        {{end}}
+                    {{else}}
+                    <span class="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">Buy Only</span>
+                    {{end}}
+                </div>
+                
+                {{if and .Children (gt (len .Children) 0)}}
+                <div class="text-xs text-blue-600 mt-1">
+                    <button 
+                        class="hover:underline flex items-center space-x-1"
+                        hx-get="/crafting/expand/{{.Recipe.ID}}/{{.Item.ID}}/{{.RequiredCount}}/3"
+                        hx-target="#subchildren-{{.Item.ID}}-{{.Recipe.ID}}"
+                        hx-swap="outerHTML"
+                        hx-indicator="#subloading-{{.Item.ID}}-{{.Recipe.ID}}"
+                        onclick="this.style.display='none'"
+                    >
+                        <span>▶ Show {{len .Children}} sub-ingredients</span>
+                    </button>
+                    <div id="subloading-{{.Item.ID}}-{{.Recipe.ID}}" class="htmx-indicator">
+                        <div class="text-xs text-gray-400 flex items-center space-x-1 mt-1">
+                            <div class="animate-spin rounded-full h-2 w-2 border border-gray-300 border-t-blue-600"></div>
+                            <span>Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        
+        <div class="text-right">
+            <div class="font-bold text-lg text-gray-900">
+                {{if .HasRecipe}}
+                <div class="text-sm">Craft: {{formatCurrency .TotalCost}}</div>
+                {{if gt .BuyPrice 0}}
+                <div class="text-sm {{if .CanCraft}}text-gray-500{{else}}text-green-600 font-bold{{end}}">
+                    Buy: {{formatCurrency .TotalBuyCost}}
+                </div>
+                {{end}}
+                {{else}}
+                {{formatCurrency .TotalCost}}
+                {{end}}
+            </div>
+            <div class="text-xs text-gray-500">
+                {{if .HasRecipe}}
+                {{formatCurrency .UnitCost}} each to craft
+                {{else}}
+                {{formatCurrency .UnitCost}} each
+                {{end}}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sub-children container -->
+    {{if .Children}}
+    <div id="subchildren-{{.Item.ID}}-{{.Recipe.ID}}" class="ml-6">
+        <!-- Sub-children will be loaded here via HTMX -->
+    </div>
+    {{end}}
+    {{end}}
+    
+    <!-- Collapse button -->
+    <div class="mt-2">
+        <button 
+            class="text-xs text-gray-500 hover:text-gray-700"
+            hx-get="/crafting/expand/{{.ParentRecipeID}}/{{.ParentItemID}}/{{.ParentQuantity}}/1"
+            hx-target="#sub-ingredients-{{.ParentRecipeID}}-{{.ParentItemID}}"
+            hx-swap="outerHTML"
+        >
+            ▼ Collapse
+        </button>
+    </div>
+</div>

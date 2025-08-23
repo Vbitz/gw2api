@@ -1,0 +1,73 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Navigation -->
+    <nav class="flex space-x-4 mb-6">
+        <a href="/" class="text-blue-600 hover:text-blue-800">← Back to Home</a>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Characters & Inventory</h1>
+        <p class="text-gray-600">Click on a character to view their details and inventory.</p>
+    </div>
+
+    {{if .Error}}
+    <!-- Error Message -->
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex">
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Error Loading Characters</h3>
+                <div class="mt-2 text-sm text-red-700">
+                    <p>{{.Error}}</p>
+                    <p class="mt-2">Make sure your API key is set and has the 'characters' scope.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{else if .Characters}}
+    <!-- Characters List -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">Your Characters</h2>
+        </div>
+        
+        <div class="divide-y divide-gray-200">
+            {{range .Characters}}
+            <div class="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
+                 onclick="window.location.href='/inventory/{{.}}'">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span class="text-blue-600 font-semibold text-lg">{{substr . 0 1}}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">{{.}}</h3>
+                            <p class="text-sm text-gray-500">Click to view character details and inventory</p>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{else}}
+    <!-- No Characters -->
+    <div class="bg-white rounded-lg shadow-md p-8 text-center">
+        <div class="text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.712-3.714M14 40v-4a9.971 9.971 0 01.712-3.714m0 0A9.971 9.971 0 0118 32a9.971 9.971 0 013.288 1.286m0 0A6.002 6.002 0 0134 36v4" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No characters found</h3>
+            <p class="mt-1 text-sm text-gray-500">Make sure your API key has the 'characters' scope.</p>
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}

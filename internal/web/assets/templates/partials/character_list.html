@@ -1,0 +1,16 @@
+{{define "character_list.html"}}
+<div id="character-list" class="space-y-2">
+    {{range .Characters}}
+    <button 
+        class="block w-full text-left px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+        hx-get="/inventory/{{.}}"
+        hx-target="#inventory-content"
+        hx-indicator="#inventory-spinner"
+    >
+        {{.}}
+    </button>
+    {{else}}
+    <p class="text-gray-500 text-center py-4">No characters found.</p>
+    {{end}}
+</div>
+{{end}}

@@ -41,16 +41,22 @@ type AccountAchievement struct {
 }
 
 // BankSlot represents an item in the account bank
+// ItemInstanceStats represents stats on an actual item instance (different from ItemStat definition)
+type ItemInstanceStats struct {
+	ID         int                    `json:"id"`
+	Attributes map[string]interface{} `json:"attributes,omitempty"`
+}
+
 type BankSlot struct {
-	ID     int              `json:"id"`
-	Count  int              `json:"count"`
-	Skin   int              `json:"skin,omitempty"`
-	Dyes   []int            `json:"dyes,omitempty"`
-	Upgrades []int          `json:"upgrades,omitempty"`
-	Infusions []int         `json:"infusions,omitempty"`
-	Binding string          `json:"binding,omitempty"`
-	BoundTo string          `json:"bound_to,omitempty"`
-	Stats   *ItemStat       `json:"stats,omitempty"`
+	ID     int                 `json:"id"`
+	Count  int                 `json:"count"`
+	Skin   int                 `json:"skin,omitempty"`
+	Dyes   []int               `json:"dyes,omitempty"`
+	Upgrades []int             `json:"upgrades,omitempty"`
+	Infusions []int            `json:"infusions,omitempty"`
+	Binding string             `json:"binding,omitempty"`
+	BoundTo string             `json:"bound_to,omitempty"`
+	Stats   *ItemInstanceStats `json:"stats,omitempty"`
 }
 
 // BuildStorage represents a build template
@@ -125,11 +131,11 @@ type HomesteadGlyph struct {
 
 // InventorySlot represents an item in shared inventory
 type InventorySlot struct {
-	ID       int       `json:"id"`
-	Count    int       `json:"count"`
-	Binding  string    `json:"binding,omitempty"`
-	BoundTo  string    `json:"bound_to,omitempty"`
-	Stats    *ItemStat `json:"stats,omitempty"`
+	ID       int                 `json:"id"`
+	Count    int                 `json:"count"`
+	Binding  string              `json:"binding,omitempty"`
+	BoundTo  string              `json:"bound_to,omitempty"`
+	Stats    *ItemInstanceStats  `json:"stats,omitempty"`
 }
 
 // JadeBot represents an unlocked jade bot

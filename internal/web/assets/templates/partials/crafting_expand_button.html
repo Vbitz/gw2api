@@ -1,0 +1,18 @@
+<div id="sub-ingredients-{{.ParentRecipeID}}-{{.ParentItemID}}" class="ml-8">
+    <button 
+        class="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+        hx-get="/crafting/expand/{{.ParentRecipeID}}/{{.ParentItemID}}/{{.ParentQuantity}}/2"
+        hx-target="#sub-ingredients-{{.ParentRecipeID}}-{{.ParentItemID}}"
+        hx-swap="outerHTML"
+        hx-indicator="#loading-{{.ParentRecipeID}}-{{.ParentItemID}}"
+        onclick="this.style.display='none'"
+    >
+        <span>▶ Show {{.ChildrenCount}} sub-ingredients</span>
+    </button>
+    <div id="loading-{{.ParentRecipeID}}-{{.ParentItemID}}" class="htmx-indicator">
+        <div class="text-xs text-gray-500 flex items-center space-x-1 mt-1">
+            <div class="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-blue-600"></div>
+            <span>Loading...</span>
+        </div>
+    </div>
+</div>

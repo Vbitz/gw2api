@@ -15,6 +15,7 @@ type DataCache struct {
 	items        *ItemCache
 	skills       *SkillCache
 	achievements *AchievementCache
+	recipes      *RecipeCache
 	mutex        sync.RWMutex
 	stats        DataCacheStats
 }
@@ -27,6 +28,7 @@ type DataCacheStats struct {
 	ItemsLoaded        int
 	SkillsLoaded       int
 	AchievementsLoaded int
+	RecipesLoaded      int
 }
 
 // NewDataCache creates a new comprehensive data cache
@@ -35,6 +37,7 @@ func NewDataCache() *DataCache {
 		items:        NewItemCache(),
 		skills:       NewSkillCache(),
 		achievements: NewAchievementCache(),
+		recipes:      NewRecipeCache(),
 	}
 }
 
@@ -76,6 +79,16 @@ func (dc *DataCache) LoadFromDirectory(dataDir string) error {
 		}
 	}
 
+	// Load recipes
+	recipesPath := fmt.Sprintf("%s/recipes.json", dataDir)
+	if _, err := os.Stat(recipesPath); err == nil {
+		if err := dc.recipes.LoadFromFile(recipesPath); err != nil {
+			errors = append(errors, fmt.Sprintf("recipes: %v", err))
+		} else {
+			dc.stats.RecipesLoaded = dc.recipes.Size()
+		}
+	}
+
 	dc.stats.LoadTime = time.Since(startTime)
 	dc.stats.LastLoadTime = time.Now()
 
@@ -107,6 +120,13 @@ func (dc *DataCache) GetAchievementCache() *AchievementCache {
 	return dc.achievements
 }
 
+// GetRecipeCache returns the recipe cache
+func (dc *DataCache) GetRecipeCache() *RecipeCache {
+	dc.mutex.RLock()
+	defer dc.mutex.RUnlock()
+	return dc.recipes
+}
+
 // Stats returns overall cache statistics
 func (dc *DataCache) Stats() DataCacheStats {
 	dc.mutex.RLock()
@@ -115,7 +135,8 @@ func (dc *DataCache) Stats() DataCacheStats {
 	// Aggregate cache hits from all sub-caches
 	dc.stats.TotalCacheHits = dc.items.stats.CacheHits +
 		dc.skills.stats.CacheHits +
-		dc.achievements.stats.CacheHits
+		dc.achievements.stats.CacheHits +
+		dc.recipes.stats.CacheHits
 
 	return dc.stats
 }
@@ -128,6 +149,7 @@ func (dc *DataCache) Clear() {
 	dc.items.Clear()
 	dc.skills.Clear()
 	dc.achievements.Clear()
+	dc.recipes.Clear()
 	dc.stats = DataCacheStats{}
 }
 

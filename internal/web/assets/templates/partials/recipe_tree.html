@@ -1,0 +1,105 @@
+<div class="bg-white border rounded-lg p-4 mt-4">
+    <div class="flex items-center justify-between mb-4">
+        <h4 class="font-semibold">Recipe: {{.OutputItem.Name}}</h4>
+        <div class="text-sm text-gray-600">
+            <span class="font-medium">Total Cost: {{formatCurrency .TotalCost}}</span>
+        </div>
+    </div>
+
+    <!-- Recipe Info -->
+    <div class="bg-gray-50 p-3 rounded mb-4 text-sm">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <p><span class="font-medium">Type:</span> {{.Recipe.Type}}</p>
+                <p><span class="font-medium">Disciplines:</span> {{join .Recipe.Disciplines ", "}}</p>
+            </div>
+            <div>
+                <p><span class="font-medium">Min Rating:</span> {{.Recipe.MinRating}}</p>
+                <p><span class="font-medium">Output:</span> {{.Recipe.OutputItemCount}}x</p>
+            </div>
+        </div>
+        {{if .Recipe.TimeToCraftMS}}
+        <p class="mt-2"><span class="font-medium">Craft Time:</span> {{divide .Recipe.TimeToCraftMS 1000}}s</p>
+        {{end}}
+    </div>
+
+    <!-- Ingredients Table -->
+    <div>
+        <h5 class="font-medium mb-3">Ingredients</h5>
+        <div class="overflow-hidden rounded-lg border">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Qty</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total Cost</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {{range .Ingredients}}
+                    <tr class="hover:bg-gray-50 cursor-pointer transition-colors"
+                        onclick="window.location.href='/items/{{.Item.ID}}'"
+                        onmousedown="if(event.button === 1) { event.preventDefault(); window.open('/items/{{.Item.ID}}', '_blank'); }"
+                        onauxclick="if(event.button === 1) { event.preventDefault(); window.open('/items/{{.Item.ID}}', '_blank'); }">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                {{if .Item.Icon}}
+                                <img src="{{.Item.Icon}}" alt="{{.Item.Name}}" class="w-8 h-8 rounded">
+                                {{else}}
+                                <div class="w-8 h-8 bg-gray-200 rounded"></div>
+                                {{end}}
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{.Item.Name}}</p>
+                                    <p class="text-xs text-gray-500 capitalize">{{.Item.Rarity}}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-sm font-medium text-gray-900">{{.Count}}</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            {{if .HasPrice}}
+                            <span class="text-sm text-gray-900">{{formatCurrency .Price.Sells.UnitPrice}}</span>
+                            {{else}}
+                            <span class="text-xs text-gray-400">No price</span>
+                            {{end}}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            {{if .HasPrice}}
+                            <span class="text-sm font-medium text-gray-900">{{formatCurrency .Cost}}</span>
+                            {{else}}
+                            <span class="text-xs text-gray-400">-</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+                {{if gt .TotalCost 0}}
+                <tfoot class="bg-gray-50">
+                    <tr>
+                        <td colspan="3" class="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                            Total Materials Cost:
+                        </td>
+                        <td class="px-4 py-3 text-right text-lg font-bold text-blue-600">
+                            {{formatCurrency .TotalCost}}
+                        </td>
+                    </tr>
+                </tfoot>
+                {{end}}
+            </table>
+        </div>
+    </div>
+
+    <!-- Profit Analysis -->
+    {{if gt .TotalCost 0}}
+    <div class="mt-4 p-3 bg-blue-50 rounded">
+        <h5 class="font-medium mb-2">Profit Analysis</h5>
+        <div class="text-sm space-y-1">
+            <p>Material Cost: <span class="font-medium">{{formatCurrency .TotalCost}}</span></p>
+            <!-- TODO: Add output item sell price for profit calculation -->
+            <p class="text-xs text-gray-600">Note: Profit calculation requires output item trading post price</p>
+        </div>
+    </div>
+    {{end}}
+</div>

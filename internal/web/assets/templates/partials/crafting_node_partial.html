@@ -1,0 +1,102 @@
+<!-- Individual Crafting Node Template -->
+{{$node := .Node}}
+<div class="crafting-node-{{$node.Item.ID}}" data-item-id="{{$node.Item.ID}}" data-recipe-id="{{$node.Recipe.ID}}" data-quantity="{{$node.RequiredCount}}">
+    <div class="flex items-center justify-between p-3 {{if $node.HasRecipe}}{{if $node.CanCraft}}bg-green-50 border-green-300{{else}}bg-yellow-50 border-yellow-300{{end}}{{else}}bg-gray-50 border-gray-300{{end}} rounded-lg border-l-4 mb-2">
+        <div class="flex items-center space-x-3 flex-1">
+            {{if $node.Item.Icon}}
+            <img src="{{$node.Item.Icon}}" alt="{{$node.Item.Name}}" class="w-8 h-8 rounded">
+            {{else}}
+            <div class="w-8 h-8 bg-gray-200 rounded"></div>
+            {{end}}
+            
+            <div class="flex-1">
+                <div class="flex items-center space-x-2">
+                    <a href="/items/{{$node.Item.ID}}" class="font-medium text-base text-gray-900 rarity-{{$node.Item.Rarity | lower}} hover:underline">{{$node.Item.Name}}</a>
+                    <span class="text-sm text-gray-500">×{{$node.RequiredCount}}</span>
+                    
+                    {{if $node.HasRecipe}}
+                        {{if $node.CanCraft}}
+                        <span class="inline-flex px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            <a href="/crafting/{{$node.Recipe.ID}}" class="hover:underline">Craft (Cheaper)</a>
+                        </span>
+                        {{if gt $node.BuyPrice 0}}
+                        <span class="inline-flex px-1 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                            Buy Available
+                        </span>
+                        {{end}}
+                        {{else}}
+                        <span class="inline-flex px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                            <a href="/crafting/{{$node.Recipe.ID}}" class="hover:underline">Craft Available</a>
+                        </span>
+                        {{if gt $node.BuyPrice 0}}
+                        <span class="inline-flex px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Buy (Cheaper)
+                        </span>
+                        {{end}}
+                        {{end}}
+                    {{else}}
+                    <span class="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">Buy Only</span>
+                    {{end}}
+                </div>
+                
+                {{if $node.Recipe}}
+                <div class="text-xs text-gray-500 mt-1">
+                    {{$node.Recipe.Type}} • {{join $node.Recipe.Disciplines ", "}} • Level {{$node.Recipe.MinRating}}
+                    {{if and $node.HasRecipe (not $node.CanCraft) (gt $node.BuyPrice 0)}}
+                    <span class="text-orange-600 font-medium"> • Buy for {{formatCurrency $node.BuyPrice}} each (cheaper)</span>
+                    {{end}}
+                </div>
+                {{end}}
+                
+                <!-- Expandable Children Indicator -->
+                {{if $node.Children}}
+                <div class="mt-2">
+                    <button 
+                        class="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1 expand-button"
+                        hx-get="/crafting/expand/{{$node.Recipe.ID}}/{{$node.Item.ID}}/{{$node.RequiredCount}}/2"
+                        hx-target="#children-{{$node.Item.ID}}-{{$node.Recipe.ID}}"
+                        hx-swap="outerHTML"
+                        hx-indicator="#loading-{{$node.Item.ID}}-{{$node.Recipe.ID}}"
+                        onclick="this.style.display='none'"
+                    >
+                        <span>▶ Show {{len $node.Children}} sub-ingredients</span>
+                    </button>
+                    <div id="loading-{{$node.Item.ID}}-{{$node.Recipe.ID}}" class="htmx-indicator">
+                        <div class="text-xs text-gray-500 flex items-center space-x-1">
+                            <div class="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-blue-600"></div>
+                            <span>Loading ingredients...</span>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        
+        <div class="text-right">
+            <div class="font-bold text-lg text-gray-900">
+                {{if $node.HasRecipe}}
+                <div class="text-sm">Craft: {{formatCurrency $node.TotalCost}}</div>
+                {{if gt $node.BuyPrice 0}}
+                <div class="text-sm {{if $node.CanCraft}}text-gray-500{{else}}text-green-600 font-bold{{end}}">
+                    Buy: {{formatCurrency $node.TotalBuyCost}}
+                </div>
+                {{end}}
+                {{else}}
+                {{formatCurrency $node.TotalCost}}
+                {{end}}
+            </div>
+            <div class="text-xs text-gray-500">
+                {{if $node.HasRecipe}}
+                {{formatCurrency $node.UnitCost}} each to craft
+                {{else}}
+                {{formatCurrency $node.UnitCost}} each
+                {{end}}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Children Container (initially empty) -->
+    <div id="children-{{$node.Item.ID}}-{{$node.Recipe.ID}}" class="ml-8 space-y-1">
+        <!-- Children will be loaded here via HTMX -->
+    </div>
+</div>

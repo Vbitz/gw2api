@@ -1,308 +1,102 @@
 {{define "content"}}
-<div class="space-y-8">
-    <!-- Hero Section -->
-    <div class="text-center py-12 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg">
-        <h1 class="text-4xl font-bold mb-4">Guild Wars 2 API Explorer</h1>
-        <p class="text-xl text-blue-100 mb-6">Discover items, skills, achievements, and more from Tyria</p>
-        <div class="flex items-center justify-center space-x-4 text-sm">
-            {{if .BuildInfo}}
-            <span class="bg-blue-500 px-3 py-1 rounded-full">Current Build: {{.BuildInfo.ID}}</span>
-            {{end}}
-            <span class="bg-blue-500 px-3 py-1 rounded-full">API v2</span>
-            <span class="bg-green-500 px-3 py-1 rounded-full">Live Data</span>
-        </div>
+<div class="max-w-4xl mx-auto">
+
+    <!-- API Key Section -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">API Key (Optional)</h2>
+        <p class="text-sm text-gray-600 mb-4">
+            Set your Guild Wars 2 API key to access account features. Visit <a href="/account" class="text-blue-600 hover:text-blue-800">My Account</a> to view characters, bank, and shared inventory.
+        </p>
+        <form hx-post="/api-key" hx-target="#api-key-status">
+            <div class="flex gap-4">
+                <input 
+                    type="text" 
+                    name="api_key" 
+                    placeholder="Your GW2 API Key"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                <button 
+                    type="submit"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    Set Key
+                </button>
+            </div>
+        </form>
+        <div id="api-key-status" class="mt-2"></div>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="gw2-card p-6 text-center">
-            <div class="text-3xl mb-2">📦</div>
-            <div class="text-2xl font-bold text-blue-600">{{.Data.Items}}</div>
-            <div class="text-gray-600 dark:text-gray-400">Items</div>
-        </div>
-        <div class="gw2-card p-6 text-center">
-            <div class="text-3xl mb-2">✨</div>
-            <div class="text-2xl font-bold text-green-600">{{.Data.Skills}}</div>
-            <div class="text-gray-600 dark:text-gray-400">Skills</div>
-        </div>
-        <div class="gw2-card p-6 text-center">
-            <div class="text-3xl mb-2">🏆</div>
-            <div class="text-2xl font-bold text-yellow-600">{{.Data.Achievements}}</div>
-            <div class="text-gray-600 dark:text-gray-400">Achievements</div>
-        </div>
-        <div class="gw2-card p-6 text-center">
-            <div class="text-3xl mb-2">🌍</div>
-            <div class="text-2xl font-bold text-purple-600">{{.Data.Worlds}}</div>
-            <div class="text-gray-600 dark:text-gray-400">Worlds</div>
-        </div>
+    <!-- Search Section -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold mb-4">Search Items</h2>
+        <form hx-post="/search/items" hx-target="#search-results" hx-trigger="submit">
+            <div class="flex gap-4">
+                <input 
+                    type="text" 
+                    name="query" 
+                    placeholder="Search for items (e.g., 'sword', 'leather', 'mystic')"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    hx-post="/search/items"
+                    hx-target="#search-results"
+                    hx-trigger="input changed delay:500ms[target.value.length > 2], input changed delay:100ms[target.value.length == 0], keyup changed delay:300ms[target.value.length > 2]"
+                    hx-indicator="#search-spinner"
+                >
+                <button 
+                    type="submit"
+                    class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                    Search
+                </button>
+                <div id="search-spinner" class="htmx-indicator">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Search Results -->
+        <div id="search-results" class="mt-4"></div>
     </div>
 
-    <!-- Main Navigation Tabs -->
-    <div class="tab-container">
-        <nav class="tab-list" role="tablist">
-            <button class="tab-button active" data-tab="items" role="tab" aria-selected="true">
-                📦 Items
+    <!-- Quick Links -->
+    <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+        <h2 class="text-lg font-semibold mb-4">Popular Categories</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button 
+                hx-post="/search/items" 
+                hx-target="#search-results"
+                hx-vals='{"query": "sword"}'
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md text-sm font-medium transition-colors"
+            >
+                Swords
             </button>
-            <button class="tab-button" data-tab="skills" role="tab" aria-selected="false">
-                ✨ Skills
+            <button 
+                hx-post="/search/items" 
+                hx-target="#search-results"
+                hx-vals='{"query": "leather"}'
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md text-sm font-medium transition-colors"
+            >
+                Leather
             </button>
-            <button class="tab-button" data-tab="achievements" role="tab" aria-selected="false">
-                🏆 Achievements
+            <button 
+                hx-post="/search/items" 
+                hx-target="#search-results"
+                hx-vals='{"query": "mystic"}'
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md text-sm font-medium transition-colors"
+            >
+                Mystic
             </button>
-            <button class="tab-button" data-tab="worlds" role="tab" aria-selected="false">
-                🌍 Worlds
+            <button 
+                hx-post="/search/items" 
+                hx-target="#search-results"
+                hx-vals='{"query": "sigil"}'
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md text-sm font-medium transition-colors"
+            >
+                Sigils
             </button>
-            <button class="tab-button" data-tab="currencies" role="tab" aria-selected="false">
-                💰 Currencies
-            </button>
-            <button class="tab-button" data-tab="trading" role="tab" aria-selected="false">
-                📈 Trading Post
-            </button>
-        </nav>
-    </div>
-
-    <!-- Tab Content -->
-    <div class="tab-content-container">
-        <!-- Items Tab -->
-        <div id="items-tab" class="tab-content active" role="tabpanel">
-            <div class="gw2-card p-6">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="mr-2">📦</span>
-                    Item Search
-                </h2>
-                
-                <form hx-get="/search/items" hx-target="#items-results" hx-trigger="submit, keyup delay:500ms from:input[name='query']" hx-indicator="#items-loading">
-                    <div class="search-form">
-                        <div>
-                            <label for="item-query" class="block text-sm font-medium mb-2">Search Items</label>
-                            <input type="text" id="item-query" name="query" placeholder="Search for items..." 
-                                   class="gw2-input search-input w-full" autocomplete="off">
-                        </div>
-                        
-                        <div>
-                            <label for="item-rarity" class="block text-sm font-medium mb-2">Rarity</label>
-                            <select id="item-rarity" name="rarity" class="gw2-input w-full">
-                                <option value="">All Rarities</option>
-                                <option value="Basic">Basic</option>
-                                <option value="Fine">Fine</option>
-                                <option value="Masterwork">Masterwork</option>
-                                <option value="Rare">Rare</option>
-                                <option value="Exotic">Exotic</option>
-                                <option value="Ascended">Ascended</option>
-                                <option value="Legendary">Legendary</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label for="item-type" class="block text-sm font-medium mb-2">Type</label>
-                            <select id="item-type" name="type" class="gw2-input w-full">
-                                <option value="">All Types</option>
-                                <option value="Armor">Armor</option>
-                                <option value="Weapon">Weapon</option>
-                                <option value="Trinket">Trinket</option>
-                                <option value="Consumable">Consumable</option>
-                                <option value="Tool">Tool</option>
-                                <option value="Trophy">Trophy</option>
-                                <option value="UpgradeComponent">Upgrade Component</option>
-                                <option value="Bag">Bag</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label for="item-level" class="block text-sm font-medium mb-2">Level Range</label>
-                            <div class="flex space-x-2">
-                                <input type="number" name="min_level" placeholder="Min" class="gw2-input w-full" min="0" max="80">
-                                <input type="number" name="max_level" placeholder="Max" class="gw2-input w-full" min="0" max="80">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <button type="submit" class="gw2-button gw2-button-primary">
-                            Search Items
-                        </button>
-                        <button type="button" onclick="clearForm(this.form)" class="gw2-button gw2-button-secondary ml-2">
-                            Clear
-                        </button>
-                    </div>
-                </form>
-                
-                <div id="items-loading" class="htmx-indicator mt-4">
-                    <div class="flex items-center justify-center py-8">
-                        <div class="loading-spinner"></div>
-                        <span class="ml-2">Searching items...</span>
-                    </div>
-                </div>
-                
-                <div id="items-results" class="mt-8">
-                    <!-- Results will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Skills Tab -->
-        <div id="skills-tab" class="tab-content" role="tabpanel">
-            <div class="gw2-card p-6">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="mr-2">✨</span>
-                    Skill Search
-                </h2>
-                
-                <form hx-get="/search/skills" hx-target="#skills-results" hx-trigger="submit, keyup delay:500ms from:input[name='query']" hx-indicator="#skills-loading">
-                    <div class="search-form">
-                        <div class="col-span-2">
-                            <label for="skill-query" class="block text-sm font-medium mb-2">Search Skills</label>
-                            <input type="text" id="skill-query" name="query" placeholder="Search for skills..." 
-                                   class="gw2-input search-input w-full">
-                        </div>
-                        
-                        <div>
-                            <label for="skill-profession" class="block text-sm font-medium mb-2">Profession</label>
-                            <select id="skill-profession" name="profession" class="gw2-input w-full">
-                                <option value="">All Professions</option>
-                                <option value="Guardian">Guardian</option>
-                                <option value="Revenant">Revenant</option>
-                                <option value="Warrior">Warrior</option>
-                                <option value="Engineer">Engineer</option>
-                                <option value="Ranger">Ranger</option>
-                                <option value="Thief">Thief</option>
-                                <option value="Elementalist">Elementalist</option>
-                                <option value="Mesmer">Mesmer</option>
-                                <option value="Necromancer">Necromancer</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label for="skill-type" class="block text-sm font-medium mb-2">Type</label>
-                            <select id="skill-type" name="type" class="gw2-input w-full">
-                                <option value="">All Types</option>
-                                <option value="Weapon">Weapon</option>
-                                <option value="Heal">Heal</option>
-                                <option value="Utility">Utility</option>
-                                <option value="Elite">Elite</option>
-                                <option value="Profession">Profession</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <button type="submit" class="gw2-button gw2-button-primary">
-                            Search Skills
-                        </button>
-                        <button type="button" onclick="clearForm(this.form)" class="gw2-button gw2-button-secondary ml-2">
-                            Clear
-                        </button>
-                    </div>
-                </form>
-                
-                <div id="skills-loading" class="htmx-indicator mt-4">
-                    <div class="flex items-center justify-center py-8">
-                        <div class="loading-spinner"></div>
-                        <span class="ml-2">Searching skills...</span>
-                    </div>
-                </div>
-                
-                <div id="skills-results" class="mt-8">
-                    <!-- Results will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Other tabs placeholder content -->
-        <div id="achievements-tab" class="tab-content" role="tabpanel">
-            <div class="gw2-card p-6">
-                <h2 class="text-2xl font-bold mb-4">🏆 Achievements</h2>
-                <p class="text-gray-600 dark:text-gray-400">Achievement search coming soon...</p>
-            </div>
-        </div>
-
-        <div id="worlds-tab" class="tab-content" role="tabpanel">
-            <div class="gw2-card p-6">
-                <h2 class="text-2xl font-bold mb-4">🌍 Worlds</h2>
-                <div hx-get="/search/worlds" hx-trigger="load" hx-target="#worlds-list">
-                    <div id="worlds-list">Loading worlds...</div>
-                </div>
-            </div>
-        </div>
-
-        <div id="currencies-tab" class="tab-content" role="tabpanel">
-            <div class="gw2-card p-6">
-                <h2 class="text-2xl font-bold mb-4">💰 Currencies</h2>
-                <div hx-get="/search/currencies" hx-trigger="load" hx-target="#currencies-list">
-                    <div id="currencies-list">Loading currencies...</div>
-                </div>
-            </div>
-        </div>
-
-        <div id="trading-tab" class="tab-content" role="tabpanel">
-            <div class="gw2-card p-6">
-                <h2 class="text-2xl font-bold mb-4">📈 Trading Post</h2>
-                <p class="text-gray-600 dark:text-gray-400">Trading post features coming soon...</p>
-            </div>
         </div>
     </div>
 </div>
-
-<script>
-// Tab functionality
-function initTabs() {
-    const tabButtons = document.querySelectorAll('.tab-button');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabName = button.dataset.tab;
-            
-            // Remove active class from all tabs and contents
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-selected', 'false');
-            });
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Add active class to clicked tab and corresponding content
-            button.classList.add('active');
-            button.setAttribute('aria-selected', 'true');
-            document.getElementById(tabName + '-tab').classList.add('active');
-        });
-    });
-}
-
-// Form utilities
-function clearForm(form) {
-    form.reset();
-    // Trigger search with empty values to show all results
-    htmx.trigger(form, 'submit');
-}
-
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', initTabs);
-</script>
-{{end}}
-
-{{define "head"}}
-<style>
-/* Additional tab-specific styles */
-.tab-content-container {
-    min-height: 500px;
-}
-
-.search-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-@media (min-width: 768px) {
-    .search-form {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1024px) {
-    .search-form {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-</style>
 {{end}}

@@ -1,197 +1,91 @@
-{{if .Results}}
-<div class="space-y-4">
-    <!-- Results header -->
-    <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">
-            {{if .Query}}
-                Search results for "{{.Query}}" ({{.Total}} items)
-            {{else}}
-                Showing {{len .Results}} items
-            {{end}}
-        </h3>
-        
-        <div class="flex items-center space-x-2">
-            <label for="sort-by" class="text-sm">Sort by:</label>
-            <select id="sort-by" name="sort" class="gw2-input text-sm py-1" 
-                    hx-get="/search/items" hx-target="#items-results" hx-include="form">
-                <option value="name">Name</option>
-                <option value="level">Level</option>
-                <option value="rarity">Rarity</option>
-                <option value="type">Type</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Results grid -->
-    <div class="search-results">
-        {{range .Results}}
-        <div class="item-card" onclick="showItemDetail({{.ID}})">
-            <div class="item-header">
-                <div class="flex-1">
-                    <h4 class="item-name {{rarityClass .Rarity}}">{{.Name}}</h4>
-                    <div class="item-level">Level {{.Level}} {{.Type}}</div>
-                </div>
-                <div class="item-icon {{rarityClass .Rarity}}">
-                    {{itemTypeIcon .Type}}
-                </div>
-            </div>
-            
-            <div class="item-type text-gray-600 dark:text-gray-400">
-                {{.Rarity}} {{.Type}}
-            </div>
-            
-            {{if .Description}}
-            <div class="item-description">
-                {{truncate .Description 100}}
-            </div>
-            {{end}}
-            
-            {{if .Details}}
-            <div class="item-stats">
-                {{if .Details.InfixUpgrade}}
-                    {{range .Details.InfixUpgrade.Attributes}}
-                    <div class="text-xs text-green-600">
-                        +{{.Modifier}} {{.Attribute}}
-                    </div>
+<div id="search-results">
+    {{if .Items}}
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rarity</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Price</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sell Price</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {{range .Items}}
+                    <tr class="hover:bg-gray-50 cursor-pointer transition-colors" 
+                        hx-get="/item/{{.ID}}" 
+                        hx-target="#item-detail-modal"
+                        hx-trigger="click"
+                        onclick="document.getElementById('item-detail-modal').classList.remove('hidden')">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                {{if .Icon}}
+                                <img src="{{.Icon}}" alt="{{.Name}}" class="w-10 h-10 rounded mr-3">
+                                {{else}}
+                                <div class="w-10 h-10 bg-gray-200 rounded mr-3"></div>
+                                {{end}}
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 rarity-{{.Rarity | lower}}">{{.Name}}</div>
+                                    {{if .Level}}
+                                    <div class="text-xs text-gray-500">Level {{.Level}}</div>
+                                    {{end}}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900 capitalize">{{.Type}}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full rarity-{{.Rarity | lower}} bg-gray-100">
+                                {{.Rarity}}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{if .HasPrice}}
+                                <span class="text-green-600 font-medium">{{formatCurrency .Price.Buys.UnitPrice}}</span>
+                                <div class="text-xs text-gray-500">{{.Price.Buys.Quantity}} orders</div>
+                            {{else}}
+                                <span class="text-gray-400">-</span>
+                            {{end}}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{if .HasPrice}}
+                                <span class="text-red-600 font-medium">{{formatCurrency .Price.Sells.UnitPrice}}</span>
+                                <div class="text-xs text-gray-500">{{.Price.Sells.Quantity}} listings</div>
+                            {{else}}
+                                <span class="text-gray-400">-</span>
+                            {{end}}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{if .VendorValue}}{{formatCurrency .VendorValue}}{{else}}-{{end}}
+                        </td>
+                    </tr>
                     {{end}}
-                {{end}}
-                
-                {{if .VendorValue}}
-                <div class="text-xs text-yellow-600 mt-1">
-                    Value: {{formatCoins .VendorValue}}
-                </div>
-                {{end}}
-            </div>
-            {{end}}
+                </tbody>
+            </table>
+        </div>
+        
+        {{if gt (len .Items) 19}}
+        <div class="mt-4 text-center">
+            <p class="text-sm text-gray-500">Showing first 20 results. Refine your search for more specific results.</p>
         </div>
         {{end}}
-    </div>
-
-    <!-- Load more button if there are more results -->
-    {{if .HasMore}}
-    <div class="text-center mt-8">
-        <button class="gw2-button gw2-button-secondary" 
-                hx-get="/search/items?page={{add .Page 1}}" 
-                hx-target="#items-results" 
-                hx-swap="afterend"
-                hx-include="form">
-            Load More Items
-        </button>
-    </div>
-    {{end}}
-</div>
-
-<script>
-function showItemDetail(itemId) {
-    fetch(`/api/item?id=${itemId}`)
-        .then(response => response.json())
-        .then(item => {
-            const content = `
-                <div class="space-y-4">
-                    <div class="flex items-start space-x-4">
-                        <div class="text-4xl">${item.icon ? '🖼️' : '📦'}</div>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold ${rarityClassJS(item.rarity)}">${item.name}</h3>
-                            <p class="text-gray-600">Level ${item.level} ${item.rarity} ${item.type}</p>
-                            ${item.description ? `<p class="mt-2">${item.description}</p>` : ''}
-                        </div>
-                        <div class="text-right">
-                            ${item.vendor_value ? `<div class="text-yellow-600">${formatCoinsJS(item.vendor_value)}</div>` : ''}
-                            <div class="text-sm text-gray-500">ID: ${item.id}</div>
-                        </div>
-                    </div>
-                    
-                    ${item.details ? renderItemDetails(item.details) : ''}
-                    
-                    <div class="flex space-x-2 pt-4 border-t">
-                        <button onclick="copyItemLink(${item.id})" class="gw2-button gw2-button-secondary">Copy Link</button>
-                        <button onclick="viewOnWiki('${item.name}')" class="gw2-button gw2-button-secondary">View on Wiki</button>
-                        <button onclick="checkPrices(${item.id})" class="gw2-button gw2-button-primary">Check Prices</button>
-                    </div>
-                </div>
-            `;
-            openModal(item.name, content);
-        })
-        .catch(err => {
-            openModal('Error', `<p class="text-red-600">Failed to load item details: ${err.message}</p>`);
-        });
-}
-
-function rarityClassJS(rarity) {
-    const rarityClasses = {
-        'Basic': 'text-gray-500',
-        'Fine': 'text-blue-500',
-        'Masterwork': 'text-green-500',
-        'Rare': 'text-yellow-500',
-        'Exotic': 'text-orange-500',
-        'Ascended': 'text-pink-500',
-        'Legendary': 'text-purple-500'
-    };
-    return rarityClasses[rarity] || 'text-gray-500';
-}
-
-function formatCoinsJS(coins) {
-    if (!coins) return '0 copper';
-    
-    const gold = Math.floor(coins / 10000);
-    const silver = Math.floor((coins % 10000) / 100);
-    const copper = coins % 100;
-    
-    let result = [];
-    if (gold > 0) result.push(`${gold}g`);
-    if (silver > 0) result.push(`${silver}s`);
-    if (copper > 0) result.push(`${copper}c`);
-    
-    return result.join(' ') || '0c';
-}
-
-function renderItemDetails(details) {
-    let html = '<div class="space-y-2">';
-    
-    if (details.infix_upgrade && details.infix_upgrade.attributes) {
-        html += '<div class="font-medium">Attributes:</div>';
-        details.infix_upgrade.attributes.forEach(attr => {
-            html += `<div class="text-green-600">+${attr.modifier} ${attr.attribute}</div>`;
-        });
-    }
-    
-    if (details.suffix_item_id) {
-        html += `<div class="text-blue-600">Suffix Item ID: ${details.suffix_item_id}</div>`;
-    }
-    
-    html += '</div>';
-    return html;
-}
-
-function copyItemLink(itemId) {
-    const url = `${window.location.origin}/item/${itemId}`;
-    navigator.clipboard.writeText(url).then(() => {
-        alert('Item link copied to clipboard!');
-    });
-}
-
-function viewOnWiki(itemName) {
-    const wikiUrl = `https://wiki.guildwars2.com/wiki/${encodeURIComponent(itemName)}`;
-    window.open(wikiUrl, '_blank');
-}
-
-function checkPrices(itemId) {
-    // Navigate to trading tab and search for prices
-    document.querySelector('[data-tab="trading"]').click();
-    // Implementation would depend on trading tab structure
-}
-</script>
-
-{{else}}
-<div class="text-center py-12 text-gray-500 dark:text-gray-400">
-    {{if .Query}}
-        <div class="text-6xl mb-4">🔍</div>
-        <h3 class="text-lg font-medium mb-2">No items found</h3>
-        <p>Try adjusting your search filters or search terms.</p>
     {{else}}
-        <div class="text-6xl mb-4">📦</div>
-        <h3 class="text-lg font-medium mb-2">Search for items</h3>
-        <p>Use the search form above to find Guild Wars 2 items.</p>
+        <div class="text-center py-8">
+            <div class="text-gray-400 text-4xl mb-4">🔍</div>
+            {{if .Query}}
+            <p class="text-gray-600">No items found for "{{.Query}}"</p>
+            <p class="text-sm text-gray-500 mt-2">Try a different search term</p>
+            {{else}}
+            <p class="text-gray-600">Enter a search term to find items</p>
+            {{end}}
+        </div>
     {{end}}
 </div>
-{{end}}
+
+<!-- Modal for item details -->
+<div id="item-detail-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <!-- Modal content will be loaded here -->
+</div>

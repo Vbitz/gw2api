@@ -1,0 +1,159 @@
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="this.classList.add('hidden')">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white" onclick="event.stopPropagation()">
+        <!-- Close button -->
+        <div class="absolute top-3 right-3">
+            <button onclick="document.getElementById('item-detail-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Item header -->
+        <div class="flex items-center space-x-4 mb-6">
+            {{if .Item.Icon}}
+            <img src="{{.Item.Icon}}" alt="{{.Item.Name}}" class="w-16 h-16 rounded">
+            {{end}}
+            <div>
+                <h2 class="text-xl font-bold rarity-{{.Item.Rarity | lower}}">{{.Item.Name}}</h2>
+                <p class="text-gray-600 capitalize">{{.Item.Type}} • {{.Item.Rarity}}</p>
+                {{if .Item.Level}}<p class="text-sm text-gray-500">Level {{.Item.Level}}</p>{{end}}
+            </div>
+        </div>
+
+        <!-- Description -->
+        {{if .Item.Description}}
+        <div class="mb-4">
+            <h3 class="font-semibold mb-2">Description</h3>
+            <p class="text-gray-700 text-sm">{{.Item.Description}}</p>
+        </div>
+        {{end}}
+
+        <!-- Trading Post Prices -->
+        {{if .HasPrice}}
+        <div class="mb-4">
+            <h3 class="font-semibold mb-2">Trading Post</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-green-50 p-3 rounded">
+                    <p class="text-sm text-gray-600">Highest Buy Order</p>
+                    <p class="text-lg font-semibold text-green-600">{{formatCurrency .Price.Buys.UnitPrice}}</p>
+                    <p class="text-xs text-gray-500">{{.Price.Buys.Quantity}} available</p>
+                </div>
+                <div class="bg-red-50 p-3 rounded">
+                    <p class="text-sm text-gray-600">Lowest Sell Listing</p>
+                    <p class="text-lg font-semibold text-red-600">{{formatCurrency .Price.Sells.UnitPrice}}</p>
+                    <p class="text-xs text-gray-500">{{.Price.Sells.Quantity}} available</p>
+                </div>
+            </div>
+        </div>
+        {{end}}
+
+        <!-- Item Stats -->
+        {{if .Item.Details}}
+        <div class="mb-4">
+            <h3 class="font-semibold mb-2">Details</h3>
+            <div class="bg-gray-50 p-3 rounded text-sm">
+                {{if .Item.Details.Defense}}
+                <p><span class="font-medium">Defense:</span> {{.Item.Details.Defense}}</p>
+                {{end}}
+                {{if .Item.Details.MinPower}}
+                <p><span class="font-medium">Damage:</span> {{.Item.Details.MinPower}}-{{.Item.Details.MaxPower}}</p>
+                {{end}}
+                {{if .Item.Details.WeightClass}}
+                <p><span class="font-medium">Weight Class:</span> {{.Item.Details.WeightClass}}</p>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+
+        <!-- Recipes -->
+        {{if .Recipes}}
+        {{if .Recipes.CreatesItem}}
+        <div class="mb-4">
+            <h3 class="font-semibold mb-2">Recipes that Create this Item</h3>
+            <div class="space-y-2">
+                {{range .Recipes.CreatesItem}}
+                <button 
+                    onclick="window.location.href='/recipe/{{.Recipe.ID}}'"
+                    class="block w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded text-sm transition-colors"
+                >
+                    <div class="flex items-center space-x-2">
+                        {{if .OutputItem}}
+                        {{if .OutputItem.Icon}}
+                        <img src="{{.OutputItem.Icon}}" alt="{{.OutputItem.Name}}" class="w-6 h-6 rounded">
+                        {{end}}
+                        <div>
+                            <div class="font-medium rarity-{{.OutputItem.Rarity | lower}}">{{.OutputItem.Name}}</div>
+                            <div class="text-xs text-gray-500">{{join .Recipe.Disciplines ", "}} • Rating {{.Recipe.MinRating}}</div>
+                        </div>
+                        {{else}}
+                        <div>
+                            <div class="font-medium">{{join .Recipe.Disciplines ", "}} • {{.Recipe.Type}}</div>
+                            <div class="text-xs text-gray-500">Rating {{.Recipe.MinRating}}</div>
+                        </div>
+                        {{end}}
+                    </div>
+                </button>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+        
+        {{if .Recipes.UsesItem}}
+        <div class="mb-4">
+            <h3 class="font-semibold mb-2">Recipes using this Item</h3>
+            <div class="space-y-2 max-h-32 overflow-y-auto">
+                {{range .Recipes.UsesItem}}
+                <button 
+                    onclick="window.location.href='/recipe/{{.Recipe.ID}}'"
+                    class="block w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded text-sm transition-colors"
+                >
+                    <div class="flex items-center space-x-2">
+                        {{if .OutputItem}}
+                        {{if .OutputItem.Icon}}
+                        <img src="{{.OutputItem.Icon}}" alt="{{.OutputItem.Name}}" class="w-6 h-6 rounded">
+                        {{end}}
+                        <div>
+                            <div class="font-medium rarity-{{.OutputItem.Rarity | lower}}">{{.OutputItem.Name}}</div>
+                            <div class="text-xs text-gray-500">{{join .Recipe.Disciplines ", "}} • Rating {{.Recipe.MinRating}}</div>
+                        </div>
+                        {{else}}
+                        <div>
+                            <div class="font-medium">{{join .Recipe.Disciplines ", "}} • {{.Recipe.Type}}</div>
+                            <div class="text-xs text-gray-500">Rating {{.Recipe.MinRating}}</div>
+                        </div>
+                        {{end}}
+                    </div>
+                </button>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+        {{end}}
+
+        <!-- Vendor Value -->
+        {{if .Item.VendorValue}}
+        <div class="mb-4">
+            <p class="text-sm text-gray-600">Vendor Value: <span class="font-medium">{{formatCurrency .Item.VendorValue}}</span></p>
+        </div>
+        {{end}}
+
+        <!-- Action buttons -->
+        <div class="flex gap-3 pt-4 border-t">
+            <button 
+                onclick="document.getElementById('item-detail-modal').classList.add('hidden')"
+                class="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
+            >
+                Close
+            </button>
+            <a 
+                href="/items/{{.Item.ID}}"
+                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center"
+            >
+                View More
+            </a>
+        </div>
+
+        <div id="recipe-detail" class="mt-4"></div>
+    </div>
+</div>
